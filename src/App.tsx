@@ -9,6 +9,7 @@ import Winners from "./pages/Winners";
 import Rules from "./pages/Rules";
 import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
+import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
