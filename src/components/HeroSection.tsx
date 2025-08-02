@@ -1,12 +1,11 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Trophy, Users, DollarSign } from "lucide-react";
-import AuthModal from "./auth/AuthModal";
+import { useNavigate } from "react-router-dom";
 import heroDesktop from "@/assets/hero-desktop.jpg";
 import heroMobile from "@/assets/hero-mobile.jpg";
 
 const HeroSection = () => {
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   const stats = [
     { icon: DollarSign, label: "Prize Pool", value: "$500,000+" },
@@ -23,7 +22,7 @@ const HeroSection = () => {
             <source media="(min-width: 768px)" srcSet={heroDesktop} />
             <img
               src={heroMobile}
-              alt="Maxim Covergirl Competition"
+              alt="Swing Boudoir Competition"
               className="w-full h-full object-cover"
             />
           </picture>
@@ -54,21 +53,21 @@ const HeroSection = () => {
 
             {/* Description */}
             <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed animate-fade-in" style={{ animationDelay: "0.4s" }}>
-              Become a Maxim content creator and compete with models from around the world. 
+              Become a Swing Boudoir content creator and compete with models from around the world. 
               Enter exclusive competitions and win amazing prizes.
             </p>
 
             {/* CTA Button */}
-            <div className="mb-16 animate-scale-in" style={{ animationDelay: "0.6s" }}>
-              <Button
-                size="lg"
-                onClick={() => setIsAuthModalOpen(true)}
-                className="bg-gradient-competition text-competition-foreground hover:opacity-90 transition-luxury text-lg px-8 py-4 h-auto shadow-glow"
-              >
-                Register Now
-                <ChevronRight className="w-5 h-5 ml-2" />
-              </Button>
-            </div>
+                         <div className="mb-16 animate-scale-in" style={{ animationDelay: "0.6s" }}>
+               <Button
+                 size="lg"
+                 onClick={() => navigate('/auth')}
+                 className="bg-gradient-competition text-competition-foreground hover:opacity-90 transition-luxury text-lg px-8 py-4 h-auto shadow-glow"
+               >
+                 Register Now
+                 <ChevronRight className="w-5 h-5 ml-2" />
+               </Button>
+             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: "0.8s" }}>
@@ -94,12 +93,7 @@ const HeroSection = () => {
         <div className="absolute bottom-1/4 right-10 w-32 h-32 rounded-full bg-competition/20 blur-xl animate-float" style={{ animationDelay: "1s" }}></div>
       </section>
 
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        mode="register"
-        onSwitchMode={() => {}}
-      />
+      
     </>
   );
 };

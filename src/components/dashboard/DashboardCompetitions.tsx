@@ -92,8 +92,8 @@ export function DashboardCompetitions() {
   };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">Competitions</h1>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <h1 className="text-2xl font-bold text-foreground">Competitions</h1>
 
       {/* User's Competitions */}
       <div className="space-y-4">

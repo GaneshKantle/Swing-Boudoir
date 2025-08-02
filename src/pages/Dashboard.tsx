@@ -11,6 +11,7 @@ import { Support } from "@/components/dashboard/Support";
 import { OfficialRules } from "@/components/dashboard/OfficialRules";
 import { TermsOfService } from "@/components/dashboard/TermsOfService";
 import { PrivacyPolicy } from "@/components/dashboard/PrivacyPolicy";
+import Header from "@/components/Header";
 
 export type DashboardSection = 
   | "notifications" 
@@ -59,7 +60,8 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="flex">
+      <Header />
+      <div className="flex pt-16">
         <Sidebar 
           activeSection={activeSection} 
           setActiveSection={setActiveSection} 

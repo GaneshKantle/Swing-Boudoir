@@ -1,0 +1,60 @@
+# Swing Boudoir Showcase API Endpoints
+
+## Base URL: https://api.swing-boudoir.com
+
+## Authentication
+POST /api/auth/login - User login
+POST /api/auth/register - User registration  
+POST /api/auth/logout - User logout
+
+## User Profile
+GET /api/user/profile - Get user profile
+PUT /api/user/profile - Update user profile
+POST /api/user/profile/images - Upload profile/voting images
+DELETE /api/user/profile/images/{imageId} - Delete image
+
+## Competitions
+GET /api/competitions/user - Get user's joined competitions
+GET /api/competitions/available - Get available competitions
+POST /api/competitions/{id}/join - Join competition
+GET /api/competitions/{id} - Get competition details
+
+## Voting
+GET /api/votes/stats - Get voting statistics
+GET /api/votes/top-voters - Get top voters
+GET /api/votes/recent - Get recent votes
+GET /api/votes/premium - Get premium votes
+
+## Notifications
+GET /api/notifications - Get user notifications
+POST /api/notifications/{id}/read - Mark notification as read
+POST /api/notifications/read-all - Mark all as read
+
+## Prize History
+GET /api/prizes/history - Get prize history
+GET /api/prizes/upcoming - Get upcoming prizes
+GET /api/prizes/stats - Get prize statistics
+
+## Settings
+GET /api/settings - Get user settings
+PUT /api/settings - Update settings
+PUT /api/settings/password - Change password
+DELETE /api/user/account - Delete account
+
+## Public Profile
+GET /api/public/profile/{modelId} - Get public profile
+POST /api/public/profile/{modelId}/vote - Vote for profile
+
+## Support
+POST /api/support/contact - Submit support request
+GET /api/support/faq - Get FAQs
+
+## Authentication Required
+Most endpoints need: Authorization: Bearer {jwt_token}
+
+## Error Response Format
+{
+  "success": false,
+  "error": "Error message",
+  "code": "ERROR_CODE"
+} 

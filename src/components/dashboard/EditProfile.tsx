@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Edit, Save, Trash2 } from "lucide-react";
+import { Upload, Edit, Save, Trash2, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock data - replace with API calls
 const mockProfile = {
@@ -29,32 +30,102 @@ const charities = [
 export function EditProfile() {
   const [profile, setProfile] = useState(mockProfile);
   const [isEditing, setIsEditing] = useState(false);
+  const [profileImages, setProfileImages] = useState<string[]>([]);
+  const [votingImages, setVotingImages] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+  const profileFileInputRef = useRef<HTMLInputElement>(null);
+  const votingFileInputRef = useRef<HTMLInputElement>(null);
 
   const saveProfile = async () => {
-    // TODO: API call to save profile
-    console.log("Saving profile:", profile);
-    // await fetch('/api/profile', { method: 'PUT', body: JSON.stringify(profile) });
-    setIsEditing(false);
+    setIsSaving(true);
+    try {
+      // TODO: API call to save profile
+      console.log("Saving profile:", profile);
+      // await fetch('/api/profile', { method: 'PUT', body: JSON.stringify(profile) });
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setIsEditing(false);
+      toast({
+        title: "Profile Updated!",
+        description: "Your profile has been saved successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save profile. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const uploadImage = async (type: 'profile' | 'voting', file: File) => {
-    // TODO: API call to upload image
-    console.log(`Uploading ${type} image:`, file.name);
-    // const formData = new FormData();
-    // formData.append('image', file);
-    // await fetch(`/api/images/${type}`, { method: 'POST', body: formData });
+  const handleFileUpload = (type: 'profile' | 'voting', files: FileList | null) => {
+    if (!files) return;
+
+    const maxImages = type === 'profile' ? 20 : 100;
+    const currentImages = type === 'profile' ? profileImages.length : votingImages.length;
+
+    if (currentImages + files.length > maxImages) {
+      toast({
+        title: "Too Many Images",
+        description: `You can only upload up to ${maxImages} images for ${type} photos.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid File",
+          description: "Please select only image files.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageUrl = e.target?.result as string;
+        if (type === 'profile') {
+          setProfileImages(prev => [...prev, imageUrl]);
+        } else {
+          setVotingImages(prev => [...prev, imageUrl]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    toast({
+      title: "Images Uploaded!",
+      description: `${files.length} image(s) have been uploaded successfully.`,
+    });
+  };
+
+  const removeImage = (type: 'profile' | 'voting', index: number) => {
+    if (type === 'profile') {
+      setProfileImages(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setVotingImages(prev => prev.filter((_, i) => i !== index));
+    }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Edit Profile</h1>
+        <h1 className="text-2xl font-bold text-foreground">Edit Profile</h1>
         <Button 
           onClick={isEditing ? saveProfile : () => setIsEditing(true)}
           className="flex items-center gap-2"
+          disabled={isSaving}
+          size="sm"
         >
           {isEditing ? <Save className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-          {isEditing ? "Save Changes" : "Edit Profile"}
+          {isEditing ? (isSaving ? "Saving..." : "Save Changes") : "Edit Profile"}
         </Button>
       </div>
 
@@ -72,6 +143,7 @@ export function EditProfile() {
                 value={profile.name}
                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                 disabled={!isEditing}
+                className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
               />
             </div>
             
@@ -83,6 +155,7 @@ export function EditProfile() {
                 onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
                 disabled={!isEditing}
                 rows={3}
+                className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
               />
             </div>
 
@@ -94,6 +167,7 @@ export function EditProfile() {
                 onChange={(e) => setProfile({ ...profile, hobbies: e.target.value })}
                 disabled={!isEditing}
                 rows={2}
+                className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
               />
             </div>
           </CardContent>
@@ -112,7 +186,7 @@ export function EditProfile() {
                 onValueChange={(value) => setProfile({ ...profile, charity: value })}
                 disabled={!isEditing}
               >
-                <SelectTrigger>
+                <SelectTrigger className={!isEditing ? "bg-muted cursor-not-allowed" : ""}>
                   <SelectValue placeholder="Select a charity" />
                 </SelectTrigger>
                 <SelectContent>
@@ -133,6 +207,7 @@ export function EditProfile() {
                 onChange={(e) => setProfile({ ...profile, charityReason: e.target.value })}
                 disabled={!isEditing}
                 rows={3}
+                className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
               />
             </div>
           </CardContent>
@@ -153,6 +228,7 @@ export function EditProfile() {
               onChange={(e) => setProfile({ ...profile, voterMessage: e.target.value })}
               disabled={!isEditing}
               rows={3}
+              className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
             />
           </div>
 
@@ -164,6 +240,7 @@ export function EditProfile() {
               onChange={(e) => setProfile({ ...profile, freeVoterMessage: e.target.value })}
               disabled={!isEditing}
               rows={3}
+              className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
             />
           </div>
         </CardContent>
@@ -176,10 +253,48 @@ export function EditProfile() {
             <CardTitle>Profile Photos (Up to 20 images)</CardTitle>
           </CardHeader>
           <CardContent>
+            <input
+              type="file"
+              ref={profileFileInputRef}
+              multiple
+              accept="image/*"
+              onChange={(e) => handleFileUpload('profile', e.target.files)}
+              className="hidden"
+              aria-label="Upload profile photos"
+            />
+            
+            {profileImages.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                {profileImages.map((image, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={image}
+                      alt={`Profile ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg"
+                    />
+                    <button
+                      onClick={() => removeImage('profile', index)}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label={`Remove profile image ${index + 1}`}
+                      title={`Remove profile image ${index + 1}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
             <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
               <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-4">Drop images here or click to upload</p>
-              <Button variant="outline">
+              <p className="text-muted-foreground mb-4">
+                {profileImages.length}/20 images uploaded
+              </p>
+              <Button 
+                variant="outline"
+                onClick={() => profileFileInputRef.current?.click()}
+                disabled={profileImages.length >= 20}
+              >
                 <Upload className="mr-2 h-4 w-4" />
                 Upload Profile Photos
               </Button>
@@ -195,10 +310,48 @@ export function EditProfile() {
             </p>
           </CardHeader>
           <CardContent>
+            <input
+              type="file"
+              ref={votingFileInputRef}
+              multiple
+              accept="image/*"
+              onChange={(e) => handleFileUpload('voting', e.target.files)}
+              className="hidden"
+              aria-label="Upload voting photos"
+            />
+            
+            {votingImages.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                {votingImages.map((image, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={image}
+                      alt={`Voting ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg"
+                    />
+                    <button
+                      onClick={() => removeImage('voting', index)}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label={`Remove voting image ${index + 1}`}
+                      title={`Remove voting image ${index + 1}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
             <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
               <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-4">Drop images here or click to upload</p>
-              <Button variant="outline">
+              <p className="text-muted-foreground mb-4">
+                {votingImages.length}/100 images uploaded
+              </p>
+              <Button 
+                variant="outline"
+                onClick={() => votingFileInputRef.current?.click()}
+                disabled={votingImages.length >= 100}
+              >
                 <Upload className="mr-2 h-4 w-4" />
                 Upload Voting Photos
               </Button>

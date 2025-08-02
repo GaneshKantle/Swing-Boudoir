@@ -64,15 +64,15 @@ const Footer = () => {
           <div className="lg:col-span-2">
             <div className="flex flex-col mb-6">
               <div className="text-3xl font-display font-bold tracking-tight">
-                MAXIM
+                SWING
               </div>
               <div className="text-sm text-white/60 tracking-wider">
-                CoverGirl
+                Boudoir
               </div>
             </div>
             <p className="text-white/80 mb-6 max-w-md">
               Join the most prestigious modeling competitions and win life-changing prizes. 
-              Become part of the Maxim family and launch your modeling career.
+              Become part of the Swing Boudoir family and launch your modeling career.
             </p>
             
             {/* Social Links */}
@@ -116,7 +116,7 @@ const Footer = () => {
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-white/60 text-sm mb-4 md:mb-0">
-              © 2024 Maxim Covergirl. All rights reserved.
+              © 2025 Swing Boudoir. All rights reserved.
             </div>
             <div className="flex space-x-6 text-sm">
               <a href="/terms" className="text-white/60 hover:text-accent transition-smooth">

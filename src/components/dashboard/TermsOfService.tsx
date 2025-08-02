@@ -3,8 +3,8 @@ import { FileText } from "lucide-react";
 
 export function TermsOfService() {
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">Terms of Service</h1>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <h1 className="text-2xl font-bold text-foreground">Terms of Service</h1>
 
       <Card>
         <CardHeader>
