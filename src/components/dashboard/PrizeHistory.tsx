@@ -85,12 +85,12 @@ export function PrizeHistory() {
   }, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Prize History</h1>
+        <h1 className="text-2xl font-bold text-foreground">Prize History</h1>
         <div className="text-right">
           <p className="text-sm text-muted-foreground">Total Prize Value</p>
-          <p className="text-2xl font-bold text-primary">${totalPrizeValue.toLocaleString()}</p>
+          <p className="text-xl font-bold text-primary">${totalPrizeValue.toLocaleString()}</p>
         </div>
       </div>
 

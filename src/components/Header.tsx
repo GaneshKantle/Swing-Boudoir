@@ -1,25 +1,35 @@
 import { useState } from "react";
-import { Menu, X, User } from "lucide-react";
+import { Menu, X, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import AuthModal from "./auth/AuthModal";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import AuthModal from "@/components/auth/AuthModal";
 
 const Header = () => {
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const { isAuthenticated, logout, user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
-  const handleAuthClick = (mode: 'login' | 'register') => {
-    setAuthMode(mode);
-    setIsAuthModalOpen(true);
+  // Check if we're on dashboard page
+  const isDashboardPage = location.pathname === '/dashboard';
+
+  const handleAuthClick = () => {
+    setShowAuthModal(true);
   };
 
-  const navItems = [
-    { label: "Competitions", href: "/competitions" },
-    { label: "Winners", href: "/winners" },
-    { label: "Rules", href: "/rules" },
-    { label: "FAQ", href: "/faq" },
-    { label: "Contact", href: "/contact" },
-  ];
+  const handleLogout = () => {
+    logout();
+  };
+
+  // const navItems = [
+  //   { label: "Competitions", href: "/competitions" },
+  //   { label: "Winners", href: "/winners" },
+  //   { label: "Rules", href: "/rules" },
+  //   { label: "FAQ", href: "/faq" },
+  //   { label: "Contact", href: "/contact" },
+  // ];
 
   return (
     <>
@@ -29,16 +39,16 @@ const Header = () => {
           <div className="flex items-center">
             <a href="/" className="flex flex-col items-start">
               <div className="text-2xl font-display font-bold text-primary tracking-tight">
-                MAXIM
+                SWING
               </div>
               <div className="text-xs font-medium text-muted-foreground -mt-1 tracking-wider">
-                CoverGirl
+                Boudoir
               </div>
             </a>
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          {/* <nav className="hidden md:flex items-center space-x-8">
             {navItems.map((item) => (
               <a
                 key={item.label}
@@ -49,26 +59,40 @@ const Header = () => {
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-accent transition-all duration-300 group-hover:w-full"></span>
               </a>
             ))}
-          </nav>
+          </nav> */}
 
           {/* Desktop Auth Buttons */}
           <div className="hidden md:flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleAuthClick('login')}
-              className="text-foreground hover:text-accent"
-            >
-              <User className="w-4 h-4 mr-2" />
-              Login
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => handleAuthClick('register')}
-              className="bg-gradient-competition text-competition-foreground hover:opacity-90 transition-smooth"
-            >
-              Register
-            </Button>
+            {!isAuthenticated || !isDashboardPage ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAuthClick}
+                  className="text-foreground hover:text-accent"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Login
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleAuthClick}
+                  className="bg-gradient-competition text-competition-foreground hover:opacity-90 transition-smooth"
+                >
+                  Register
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-foreground hover:text-accent"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu */}
@@ -83,15 +107,15 @@ const Header = () => {
                 <div className="flex items-center justify-between py-4 border-b border-border">
                   <div className="flex flex-col">
                     <div className="text-xl font-display font-bold text-primary">
-                      MAXIM
+                      SWING
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      CoverGirl
+                      Boudoir
                     </div>
                   </div>
                 </div>
 
-                <nav className="flex-1 py-6">
+                {/* <nav className="flex-1 py-6">
                   <ul className="space-y-4">
                     {navItems.map((item) => (
                       <li key={item.label}>
@@ -104,23 +128,36 @@ const Header = () => {
                       </li>
                     ))}
                   </ul>
-                </nav>
+                </nav> */}
 
                 <div className="border-t border-border pt-6 space-y-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleAuthClick('login')}
-                    className="w-full"
-                  >
-                    <User className="w-4 h-4 mr-2" />
-                    Login
-                  </Button>
-                  <Button
-                    onClick={() => handleAuthClick('register')}
-                    className="w-full bg-gradient-competition text-competition-foreground"
-                  >
-                    Register
-                  </Button>
+                  {!isAuthenticated || !isDashboardPage ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={handleAuthClick}
+                        className="w-full"
+                      >
+                        <User className="w-4 h-4 mr-2" />
+                        Login
+                      </Button>
+                      <Button
+                        onClick={handleAuthClick}
+                        className="w-full bg-gradient-competition text-competition-foreground"
+                      >
+                        Register
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={handleLogout}
+                      className="w-full"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </Button>
+                  )}
                 </div>
               </div>
             </SheetContent>
@@ -128,11 +165,10 @@ const Header = () => {
         </div>
       </header>
 
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        mode={authMode}
-        onSwitchMode={setAuthMode}
+      {/* Authentication Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
       />
     </>
   );

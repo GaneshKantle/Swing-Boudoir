@@ -1,52 +1,114 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Share, Heart, Clock, Trophy, Copy } from "lucide-react";
+import { Share, ExternalLink, Eye, Users, Trophy, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
 
-// Mock data
-const mockProfile = {
-  name: "Jane Doe",
-  bio: "Model and fitness enthusiast passionate about empowering others.",
-  totalVotes: 1247,
-  ranking: 3,
-  totalParticipants: 156,
-  votesNeededForFirst: 89
+// API endpoints for real data integration
+const API_ENDPOINTS = {
+  getUserProfile: '/api/user/profile',
+  getUserCompetitions: '/api/user/competitions',
+  getUserStats: '/api/user/stats'
 };
 
-const mockCompetitions = [
-  {
-    id: 1,
-    name: "Hot Girl Summer - Barbados",
-    endDate: new Date("2024-12-31T23:59:59"),
-    prize: "$500,000 cash prize, 2 tickets to Barbados",
-    currentVotes: 847,
-    ranking: 3
-  },
-  {
-    id: 2,
-    name: "Big Game Competition",
-    endDate: new Date("2024-11-15T23:59:59"),
-    prize: "$100,000 cash prize",
-    currentVotes: 400,
-    ranking: 7
-  }
-];
+// Types for API responses
+interface UserProfile {
+  name: string;
+  bio: string;
+  modelId: string;
+  image?: string;
+}
+
+interface UserStats {
+  totalVotes: number;
+  ranking: number;
+  totalParticipants: number;
+  votesNeededForFirst: number;
+}
+
+interface Competition {
+  id: number;
+  name: string;
+  endDate: string;
+  prize: string;
+  currentVotes: number;
+  ranking: number;
+  status: 'active' | 'ended' | 'upcoming';
+}
+
+// Mock data for development - replace with API calls
+const mockProfile: UserProfile = {
+  name: "Jazira Murphy",
+  bio: "Model and fitness enthusiast passionate about empowering others.",
+  modelId: "LXoab"
+};
+
+const mockStats: UserStats = {
+  totalVotes: 0,
+  ranking: 0,
+  totalParticipants: 0,
+  votesNeededForFirst: 0
+};
+
+const mockCompetitions: Competition[] = [];
 
 export function PublicProfile() {
+  const [profile, setProfile] = useState<UserProfile>(mockProfile);
+  const [stats, setStats] = useState<UserStats>(mockStats);
+  const [competitions, setCompetitions] = useState<Competition[]>(mockCompetitions);
   const [timeLeft, setTimeLeft] = useState<{ [key: number]: string }>({});
-  const [userVotes, setUserVotes] = useState(0);
-  const [lastVoteTime, setLastVoteTime] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Countdown timer
+  // Fetch user data on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // TODO: Replace with actual API calls
+        // const profileResponse = await fetch(API_ENDPOINTS.getUserProfile);
+        // const statsResponse = await fetch(API_ENDPOINTS.getUserStats);
+        // const competitionsResponse = await fetch(API_ENDPOINTS.getUserCompetitions);
+        
+        // const profileData = await profileResponse.json();
+        // const statsData = await statsResponse.json();
+        // const competitionsData = await competitionsResponse.json();
+        
+        // setProfile(profileData);
+        // setStats(statsData);
+        // setCompetitions(competitionsData);
+        
+        // For now, using mock data
+        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+        setProfile(mockProfile);
+        setStats(mockStats);
+        setCompetitions(mockCompetitions);
+        
+      } catch (error) {
+        console.error('Failed to fetch user data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load profile data. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [toast]);
+
+  // Countdown timer for competitions
   useEffect(() => {
     const timer = setInterval(() => {
       const newTimeLeft: { [key: number]: string } = {};
-      mockCompetitions.forEach(comp => {
+      competitions.forEach(comp => {
         const now = new Date().getTime();
-        const end = comp.endDate.getTime();
+        const end = new Date(comp.endDate).getTime();
         const difference = end - now;
 
         if (difference > 0) {
@@ -55,7 +117,7 @@ export function PublicProfile() {
           const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
           const seconds = Math.floor((difference % (1000 * 60)) / 1000);
           
-          newTimeLeft[comp.id] = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+          newTimeLeft[comp.id] = `${days.toString().padStart(2, '0')} : ${hours.toString().padStart(2, '0')} : ${minutes.toString().padStart(2, '0')} : ${seconds.toString().padStart(2, '0')}`;
         } else {
           newTimeLeft[comp.id] = "Ended";
         }
@@ -64,47 +126,7 @@ export function PublicProfile() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
-
-  const canVote = () => {
-    if (!lastVoteTime) return true;
-    const now = new Date();
-    const hoursSinceLastVote = (now.getTime() - lastVoteTime.getTime()) / (1000 * 60 * 60);
-    return hoursSinceLastVote >= 24;
-  };
-
-  const getTimeUntilNextVote = () => {
-    if (!lastVoteTime) return null;
-    const now = new Date();
-    const nextVoteTime = new Date(lastVoteTime.getTime() + 24 * 60 * 60 * 1000);
-    const hoursLeft = Math.ceil((nextVoteTime.getTime() - now.getTime()) / (1000 * 60 * 60));
-    return hoursLeft;
-  };
-
-  const handleVote = async () => {
-    if (canVote()) {
-      // TODO: API call to submit vote
-      console.log("Submitting vote");
-      setUserVotes(prev => prev + 1);
-      setLastVoteTime(new Date());
-      toast({
-        title: "Vote Submitted!",
-        description: "Your vote has been counted successfully.",
-      });
-    } else {
-      const hoursLeft = getTimeUntilNextVote();
-      toast({
-        title: "Vote Limit Reached",
-        description: `You must wait ${hoursLeft} hours to vote again.`,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handlePremiumVote = () => {
-    // TODO: Navigate to premium voting/payment
-    console.log("Redirecting to premium voting");
-  };
+  }, [competitions]);
 
   const shareProfile = async () => {
     const url = window.location.href;
@@ -119,125 +141,138 @@ export function PublicProfile() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-foreground">Public Profile</h1>
+        </div>
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground mt-2">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="max-w-2xl mx-auto space-y-4">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">{mockProfile.name}</h1>
-        <Button onClick={shareProfile} variant="outline">
-          <Share className="mr-2 h-4 w-4" />
-          Share Profile
-        </Button>
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Public Profile</h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            Manage your public profile and track progress
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Link 
+            to={`/model/${profile.modelId}`}
+            className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs"
+          >
+            <Eye className="mr-1.5 h-3 w-3" />
+            View Profile
+          </Link>
+          <Button onClick={shareProfile} variant="outline" size="sm" className="text-xs px-3 py-1.5">
+            <Share className="mr-1.5 h-3 w-3" />
+            Share
+          </Button>
+        </div>
       </div>
 
-      {/* Profile Header */}
+      {/* Profile Overview */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="text-center space-y-4">
-            <div className="w-32 h-32 bg-primary/10 rounded-full mx-auto flex items-center justify-center">
-              <span className="text-4xl font-bold text-primary">{mockProfile.name.charAt(0)}</span>
+        <CardContent className="p-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+              <span className="text-lg font-bold text-primary">{profile.name.charAt(0)}</span>
             </div>
-            <div>
-              <h2 className="text-2xl font-bold">{mockProfile.name}</h2>
-              <p className="text-muted-foreground mt-2">{mockProfile.bio}</p>
+            <div className="flex-1">
+              <h2 className="text-base font-semibold">{profile.name}</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">{profile.bio}</p>
             </div>
-            <div className="flex justify-center gap-4">
-              <Badge variant="secondary">
-                {mockProfile.totalVotes} Total Votes
-              </Badge>
-              <Badge variant="outline">
-                Rank #{mockProfile.ranking} of {mockProfile.totalParticipants}
-              </Badge>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-3 mt-4">
+            <div className="text-center">
+              <div className="text-lg font-bold text-primary">{stats.totalVotes}</div>
+              <div className="text-xs text-muted-foreground">Total Votes</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-primary">#{stats.ranking}</div>
+              <div className="text-xs text-muted-foreground">Current Rank</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-primary">{stats.totalParticipants}</div>
+              <div className="text-xs text-muted-foreground">Participants</div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Voting Section */}
+      {/* Share URL */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Heart className="mr-2 h-5 w-5" />
-            Vote for {mockProfile.name}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-center">
-            <p className="text-muted-foreground mb-4">
-              You have cast {userVotes} votes for {mockProfile.name}
-            </p>
-            
-            {canVote() ? (
-              <Button onClick={handleVote} size="lg" className="w-full">
-                <Heart className="mr-2 h-4 w-4" />
-                Vote for {mockProfile.name}
-              </Button>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-destructive">
-                  You must wait {getTimeUntilNextVote()} hours to vote again.
-                </p>
-                <Button onClick={handlePremiumVote} variant="outline" size="lg" className="w-full">
-                  Vote Again Now (Premium)
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <div className="border-t pt-4">
-            <h4 className="font-semibold mb-2">Premium Voting Options</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Button variant="outline" onClick={handlePremiumVote}>
-                20 votes for $10
-              </Button>
-              <Button variant="outline" onClick={handlePremiumVote}>
-                40 votes for $20
-              </Button>
-              <Button variant="outline" onClick={handlePremiumVote}>
-                60 votes for $30
-              </Button>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-sm mb-0.5">Your Profile URL</h3>
+              <p className="text-xs text-muted-foreground">
+                Share this link to get more votes
+              </p>
             </div>
+            <Button onClick={shareProfile} variant="outline" size="sm" className="text-xs px-3 py-1.5">
+              <Share className="mr-1.5 h-3 w-3" />
+              Copy
+            </Button>
+          </div>
+          <div className="bg-muted p-2 rounded-md mt-2">
+            <code className="text-xs break-all">https://vip.covergirl.maxim.com/model/{profile.modelId}</code>
           </div>
         </CardContent>
       </Card>
 
       {/* Competitions */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-bold">Active Competitions</h2>
-        {mockCompetitions.map((competition) => (
-          <Card key={competition.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center">
-                  <Trophy className="mr-2 h-5 w-5" />
-                  {competition.name}
-                </CardTitle>
-                <Badge variant="secondary">
-                  Rank #{competition.ranking}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-muted-foreground">{competition.prize}</p>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Time remaining: {timeLeft[competition.id]}</span>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-semibold text-sm">Active Competitions</h3>
+              <p className="text-xs text-muted-foreground">
+                {competitions.length} competition{competitions.length !== 1 ? 's' : ''} active
+              </p>
+            </div>
+            <Trophy className="h-4 w-4 text-muted-foreground" />
+          </div>
+          
+          {competitions.length === 0 ? (
+            <div className="text-center py-6">
+              <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No active competitions</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Check back later for new opportunities
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {competitions.map((competition) => (
+                <div key={competition.id} className="border rounded-md p-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <h4 className="font-medium text-xs">{competition.name}</h4>
+                    <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                      Rank #{competition.ranking}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-1.5">{competition.prize}</p>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Clock className="mr-1 h-3 w-3" />
+                    <span>{timeLeft[competition.id] || "Loading..."}</span>
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {competition.currentVotes} votes
-                </div>
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                There are {mockProfile.totalParticipants} participants. 
-                You are currently ranked #{mockProfile.ranking}. 
-                You need {mockProfile.votesNeededForFirst} more votes to reach #1.
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
