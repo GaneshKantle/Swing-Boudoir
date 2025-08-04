@@ -2,29 +2,19 @@
  * Authentication Utilities for Swing Boudoir Showcase
  * 
  * This module handles:
- * - Google OAuth configuration and initialization
  * - Manual email/password authentication
  * - JWT token management and validation
  * - API authentication headers
  * - User session management
+ * 
+ * @author Swing Boudoir Development Team
+ * @version 1.0.0
  */
 
 import { jwtDecode } from 'jwt-decode';
 
-// Google OAuth Configuration
-export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-export const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '';
-
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.swing-boudoir.com';
-
-// Debug logging for environment variables
-if (import.meta.env.DEV) {
-  console.log('Google Client ID configured:', !!GOOGLE_CLIENT_ID);
-  console.log('Google Client ID value:', GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.substring(0, 20)}...` : 'NOT SET');
-  console.log('API Base URL:', API_BASE_URL);
-  console.log('Current origin:', window.location.origin);
-}
+export const API_BASE_URL = 'http://localhost:3002';
 
 // JWT Token Interface
 export interface JWTPayload {
@@ -55,139 +45,14 @@ export interface AuthResponse {
   error?: string;
 }
 
-// Registration Data Interface
-export interface RegisterData {
-  email: string;
-  password: string;
-  name: string;
-  confirmPassword: string;
-}
-
-// Login Data Interface
-export interface LoginData {
-  email: string;
-  password: string;
-}
-
 /**
- * Initialize Google OAuth
- * Loads the Google API script and initializes the OAuth client
+ * Register new user with email and password
+ * @param userData - User registration data
+ * @returns Promise<AuthResponse> - Registration result with user data and token
  */
-export const initializeGoogleAuth = (): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    // Check if Google Client ID is configured
-    if (!GOOGLE_CLIENT_ID) {
-      reject(new Error('Google Client ID is not configured'));
-      return;
-    }
-
-    // Check if Google API is already loaded
-    if (window.gapi) {
-      window.gapi.load('auth2', () => {
-        window.gapi.auth2.init({
-          client_id: GOOGLE_CLIENT_ID,
-          scope: 'email profile'
-        }).then(() => {
-          console.log('Google OAuth initialized successfully');
-          resolve();
-        }).catch((error) => {
-          console.error('Google OAuth initialization failed:', error);
-          reject(error);
-        });
-      });
-    } else {
-      // Load Google API script
-      const script = document.createElement('script');
-      script.src = 'https://apis.google.com/js/api.js';
-      script.onload = () => {
-        window.gapi.load('auth2', () => {
-          window.gapi.auth2.init({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: 'email profile'
-          }).then(() => {
-            console.log('Google OAuth initialized successfully');
-            resolve();
-          }).catch((error) => {
-            console.error('Google OAuth initialization failed:', error);
-            reject(error);
-          });
-        });
-      };
-      script.onerror = (error) => {
-        console.error('Failed to load Google API script:', error);
-        reject(new Error('Failed to load Google API script'));
-      };
-      document.head.appendChild(script);
-    }
-  });
-};
-
-/**
- * Authenticate user with Google OAuth
- * @returns Promise<AuthResponse> - Authentication result with user data and token
- */
-export const authenticateWithGoogle = async (): Promise<AuthResponse> => {
+export const registerUser = async (userData: { name: string; email: string; password: string }): Promise<AuthResponse> => {
   try {
-    // Ensure Google OAuth is initialized
-    if (!window.gapi?.auth2) {
-      await initializeGoogleAuth();
-    }
-
-    // Check if Google Client ID is configured
-    if (!GOOGLE_CLIENT_ID) {
-      throw new Error('Google Client ID is not configured. Please check your environment variables.');
-    }
-
-    // Try popup authentication first, with fallback to redirect
-    let googleUser;
-    try {
-      // First attempt: Try popup authentication
-      googleUser = await window.gapi.auth2.getAuthInstance().signIn();
-    } catch (signInError: unknown) {
-      const error = signInError as { error?: string };
-      
-      // If popup fails, try redirect flow
-      if (error.error === 'popup_closed_by_user' || error.error === 'popup_blocked') {
-        console.log('Popup failed, trying redirect flow...');
-        
-        // Use redirect flow as fallback
-        const authInstance = window.gapi.auth2.getAuthInstance();
-        
-        // Check if user is already signed in
-        try {
-          googleUser = await authInstance.signIn();
-        } catch (retryError) {
-          // If still failing, suggest manual retry
-          throw new Error('Authentication was cancelled. Please try again and complete the Google sign-in process.');
-        }
-      } else if (error.error === 'access_denied') {
-        throw new Error('Access was denied. Please allow access to your Google account.');
-      } else if (error.error === 'immediate_failed') {
-        throw new Error('Authentication failed. Please try again.');
-      } else {
-        throw new Error(`Google authentication failed: ${error.error || 'Unknown error'}`);
-      }
-    }
-
-    const profile = googleUser.getBasicProfile();
-    const idToken = googleUser.getAuthResponse().id_token;
-
-    // Validate that we have the required data
-    if (!profile.getId() || !profile.getEmail()) {
-      throw new Error('Incomplete profile data received from Google.');
-    }
-
-    // Prepare user data for backend
-    const userData = {
-      googleId: profile.getId(),
-      email: profile.getEmail(),
-      name: profile.getName(),
-      picture: profile.getImageUrl(),
-      idToken: idToken
-    };
-
-    // Send to backend for verification and JWT generation
-    const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
+    const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -195,10 +60,6 @@ export const authenticateWithGoogle = async (): Promise<AuthResponse> => {
       body: JSON.stringify(userData),
     });
 
-    if (!response.ok) {
-      throw new Error(`Backend authentication failed: ${response.status} ${response.statusText}`);
-    }
-
     const result: AuthResponse = await response.json();
 
     if (result.success && result.token) {
@@ -211,77 +72,7 @@ export const authenticateWithGoogle = async (): Promise<AuthResponse> => {
       
       return result;
     } else {
-      throw new Error(result.error || 'Authentication failed');
-    }
-  } catch (error) {
-    console.error('Google authentication error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Authentication failed'
-    };
-  }
-};
-
-/**
- * Register new user with email and password
- * @param data - Registration data
- * @returns Promise<AuthResponse> - Registration result
- */
-export const registerUser = async (data: RegisterData): Promise<AuthResponse> => {
-  try {
-    // Validate password confirmation
-    if (data.password !== data.confirmPassword) {
-      return {
-        success: false,
-        error: 'Passwords do not match'
-      };
-    }
-
-    // Validate password strength
-    if (data.password.length < 8) {
-      return {
-        success: false,
-        error: 'Password must be at least 8 characters long'
-      };
-    }
-
-    // Send registration request to backend
-    const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: data.email,
-        password: data.password,
-        name: data.name
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      return {
-        success: false,
-        error: errorData.error || `Registration failed: ${response.status} ${response.statusText}`
-      };
-    }
-
-    const result: AuthResponse = await response.json();
-
-    if (result.success && result.token) {
-      // Store token in memory (not localStorage for security)
-      sessionStorage.setItem('authToken', result.token);
-      sessionStorage.setItem('userData', JSON.stringify(result.user));
-      
-      // Set up automatic token refresh
-      setupTokenRefresh(result.token);
-      
-      return result;
-    } else {
-      return {
-        success: false,
-        error: result.error || 'Registration failed'
-      };
+      throw new Error(result.error || 'Registration failed');
     }
   } catch (error) {
     console.error('Registration error:', error);
@@ -293,31 +84,19 @@ export const registerUser = async (data: RegisterData): Promise<AuthResponse> =>
 };
 
 /**
- * Login user with email and password
- * @param data - Login data
- * @returns Promise<AuthResponse> - Login result
+ * Authenticate user with email and password
+ * @param credentials - User login credentials
+ * @returns Promise<AuthResponse> - Authentication result with user data and token
  */
-export const loginUser = async (data: LoginData): Promise<AuthResponse> => {
+export const loginWithEmail = async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
   try {
-    // Send login request to backend
     const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        email: data.email,
-        password: data.password
-      }),
+      body: JSON.stringify(credentials),
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      return {
-        success: false,
-        error: errorData.error || `Login failed: ${response.status} ${response.statusText}`
-      };
-    }
 
     const result: AuthResponse = await response.json();
 
@@ -331,10 +110,7 @@ export const loginUser = async (data: LoginData): Promise<AuthResponse> => {
       
       return result;
     } else {
-      return {
-        success: false,
-        error: result.error || 'Login failed'
-      };
+      throw new Error(result.error || 'Login failed');
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -411,11 +187,6 @@ export const getCurrentUser = (): User | null => {
  * Logout user and clear session
  */
 export const logout = (): void => {
-  // Sign out from Google
-  if (window.gapi?.auth2) {
-    window.gapi.auth2.getAuthInstance().signOut();
-  }
-  
   // Clear session storage
   sessionStorage.removeItem('authToken');
   sessionStorage.removeItem('userData');
@@ -504,32 +275,9 @@ export const isAuthenticated = (): boolean => {
   return !!(token && user);
 };
 
-// Google API types
-interface GoogleAuth {
-  init(config: { client_id: string; scope: string }): Promise<void>;
-  getAuthInstance(): {
-    signIn(): Promise<{
-      getBasicProfile(): {
-        getId(): string;
-        getEmail(): string;
-        getName(): string;
-        getImageUrl(): string;
-      };
-      getAuthResponse(): { id_token: string };
-    }>;
-    signOut(): void;
-  };
-}
-
-interface GoogleAPI {
-  load(api: string, callback: () => void): void;
-  auth2: GoogleAuth;
-}
-
-// Extend Window interface for Google API
+// Extend Window interface for token refresh timer
 declare global {
   interface Window {
-    gapi: GoogleAPI;
     tokenRefreshTimer?: NodeJS.Timeout;
   }
 }

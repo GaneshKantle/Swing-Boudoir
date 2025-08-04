@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Edit, Save, Trash2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUploadThing, uploadFiles } from "@/lib/uploadthing";
 
 // Mock data - replace with API calls
 const mockProfile = {
@@ -36,6 +37,18 @@ export function EditProfile() {
   const { toast } = useToast();
   const profileFileInputRef = useRef<HTMLInputElement>(null);
   const votingFileInputRef = useRef<HTMLInputElement>(null);
+
+  const { startUpload, routeConfig } = useUploadThing("profileImages", {
+    // onClientUploadComplete: () => {
+    //   alert("uploaded successfully!");
+    // },
+    // onUploadError: () => {
+    //   alert("error occurred while uploading");
+    // },
+    onUploadBegin: (fileName) => {
+      console.log("upload has begun for", fileName);
+    },
+  });
 
   const saveProfile = async () => {
     setIsSaving(true);
@@ -99,6 +112,9 @@ export function EditProfile() {
       };
       reader.readAsDataURL(file);
     });
+
+    startUpload(Array.from(files))
+
 
     toast({
       title: "Images Uploaded!",

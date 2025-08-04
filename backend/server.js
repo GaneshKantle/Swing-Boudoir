@@ -7,6 +7,9 @@
  * - User profile management
  * - Competition and voting APIs
  * - File upload handling
+ * 
+ * @author Swing Boudoir Development Team
+ * @version 1.0.0
  */
 
 const express = require('express');
@@ -15,23 +18,16 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
-const { OAuth2Client } = require('google-auth-library');
-
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // Environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
-
-// Initialize Google OAuth client
-const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || ['http://localhost:5173', 'http://localhost:8080'],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -114,61 +110,133 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// Google OAuth verification
-const verifyGoogleToken = async (idToken) => {
-  try {
-    const ticket = await googleClient.verifyIdToken({
-      idToken: idToken,
-      audience: GOOGLE_CLIENT_ID
-    });
-    return ticket.getPayload();
-  } catch (error) {
-    throw new Error('Invalid Google token');
-  }
+// Password hashing functions
+const hashPassword = (password) => {
+  return bcrypt.hashSync(password, 10);
+};
+
+const verifyPassword = (password, hashedPassword) => {
+  return bcrypt.compareSync(password, hashedPassword);
 };
 
 /**
  * Authentication Routes
  */
 
-// Google OAuth login/register
-app.post('/api/auth/google', async (req, res) => {
+// User registration
+app.post('/api/auth/register', (req, res) => {
   try {
-    const { idToken, googleId, email, name, picture } = req.body;
+    const { email, password, name } = req.body;
 
-    // Verify Google token
-    const googlePayload = await verifyGoogleToken(idToken);
-    
-    if (googlePayload.email !== email) {
+    // Validate input
+    if (!email || !password || !name) {
       return res.status(400).json({
         success: false,
-        error: 'Email mismatch',
-        code: 'EMAIL_MISMATCH'
+        error: 'All fields are required',
+        code: 'MISSING_FIELDS'
       });
     }
 
-    // Check if user exists
-    let user = users.find(u => u.email === email);
-    
+    // Check if user already exists
+    const existingUser = users.find(u => u.email === email);
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        error: 'User with this email already exists',
+        code: 'USER_EXISTS'
+      });
+    }
+
+    // Validate password strength
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password must be at least 8 characters long',
+        code: 'WEAK_PASSWORD'
+      });
+    }
+
+    // Create new user
+    const hashedPassword = hashPassword(password);
+    const user = {
+      id: Date.now().toString(),
+      email,
+      name,
+      password: hashedPassword,
+      isVerified: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    users.push(user);
+
+    // Generate JWT token
+    const token = generateToken(user);
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      },
+      token
+    });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Registration failed',
+      code: 'REGISTRATION_FAILED'
+    });
+  }
+});
+
+// User login
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required',
+        code: 'MISSING_FIELDS'
+      });
+    }
+
+    // Find user by email
+    const user = users.find(u => u.email === email);
     if (!user) {
-      // Create new user
-      user = {
-        id: Date.now().toString(),
-        googleId,
-        email,
-        name,
-        picture,
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      users.push(user);
-    } else {
-      // Update existing user
-      user.googleId = googleId;
-      user.name = name;
-      user.picture = picture;
-      user.updatedAt = new Date().toISOString();
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid email or password',
+        code: 'INVALID_CREDENTIALS'
+      });
+    }
+
+    // Check if user has password (manual registration)
+    if (!user.password) {
+      return res.status(401).json({
+        success: false,
+        error: 'This account was created with Google. Please use Google login.',
+        code: 'GOOGLE_ACCOUNT'
+      });
+    }
+
+    // Verify password
+    if (!verifyPassword(password, user.password)) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid email or password',
+        code: 'INVALID_CREDENTIALS'
+      });
     }
 
     // Generate JWT token
@@ -176,16 +244,24 @@ app.post('/api/auth/google', async (req, res) => {
 
     res.json({
       success: true,
-      user,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      },
       token
     });
 
   } catch (error) {
-    console.error('Google auth error:', error);
+    console.error('Login error:', error);
     res.status(500).json({
       success: false,
-      error: 'Authentication failed',
-      code: 'AUTH_FAILED'
+      error: 'Login failed',
+      code: 'LOGIN_FAILED'
     });
   }
 });
@@ -991,10 +1067,7 @@ app.use('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Swing Boudoir API server running on port ${PORT}`);
   console.log(`📱 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🔐 Google OAuth Configuration:`);
-  console.log(`   - Client ID: ${GOOGLE_CLIENT_ID ? '✅ Configured' : '❌ Not configured'}`);
-  console.log(`   - Client Secret: ${GOOGLE_CLIENT_SECRET ? '✅ Configured' : '❌ Not configured'}`);
-  console.log(`🔑 JWT Secret: ${JWT_SECRET ? '✅ Configured' : '❌ Not configured'}`);
+  console.log(`🔐 Manual authentication enabled`);
 });
 
 module.exports = app; 
