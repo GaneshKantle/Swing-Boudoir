@@ -3,25 +3,24 @@
  * 
  * This context provides:
  * - Global authentication state management
- * - Google OAuth integration
+ * - Manual email/password authentication
  * - User session management
  * - Protected route handling
+ * 
+ * @author Swing Boudoir Development Team
+ * @version 1.0.0
  */
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  authenticateWithGoogle, 
   getCurrentUser, 
   isAuthenticated, 
   logout as logoutUser,
-  initializeGoogleAuth,
-  loginUser,
+  loginWithEmail,
   registerUser,
   User,
-  AuthResponse,
-  LoginData,
-  RegisterData
+  AuthResponse
 } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,9 +29,8 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: () => Promise<void>;
-  loginWithEmail: (data: LoginData) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  loginWithEmail: (credentials: { email: string; password: string }) => Promise<void>;
+  register: (userData: { name: string; email: string; password: string }) => Promise<void>;
   logout: () => void;
   refreshUser: () => void;
 }
@@ -62,9 +60,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Initialize Google OAuth
-        await initializeGoogleAuth();
-        
         // Check if user is already authenticated
         const currentUser = getCurrentUser();
         const authenticated = isAuthenticated();
@@ -89,60 +84,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [toast]);
 
   /**
-   * Handle Google OAuth login
-   */
-  const login = async (): Promise<void> => {
-    try {
-      setIsLoading(true);
-      
-      const authResponse: AuthResponse = await authenticateWithGoogle();
-      
-      if (authResponse.success && authResponse.user && authResponse.token) {
-        setUser(authResponse.user);
-        setIsAuth(true);
-        
-        toast({
-          title: "Login Successful!",
-          description: `Welcome back, ${authResponse.user.name}!`,
-        });
-        
-        // Navigate to dashboard after successful login
-        navigate('/dashboard');
-      } else {
-        throw new Error(authResponse.error || 'Authentication failed');
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Login failed';
-      
-      // Check if it's a popup closure error and provide helpful message
-      if (errorMessage.includes('cancelled') || errorMessage.includes('popup_closed')) {
-        toast({
-          title: "Authentication Cancelled",
-          description: "Please try again and complete the Google sign-in process. If the popup keeps closing, try disabling popup blockers or use an incognito window.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Login Failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /**
    * Handle email/password login
    */
-  const loginWithEmail = async (data: LoginData): Promise<void> => {
+  const handleLoginWithEmail = async (credentials: { email: string; password: string }): Promise<void> => {
     try {
       setIsLoading(true);
       
-      const authResponse: AuthResponse = await loginUser(data);
+      const authResponse: AuthResponse = await loginWithEmail(credentials);
       
       if (authResponse.success && authResponse.user && authResponse.token) {
         setUser(authResponse.user);
@@ -176,11 +124,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   /**
    * Handle user registration
    */
-  const register = async (data: RegisterData): Promise<void> => {
+  const handleRegister = async (userData: { name: string; email: string; password: string }): Promise<void> => {
     try {
       setIsLoading(true);
       
-      const authResponse: AuthResponse = await registerUser(data);
+      const authResponse: AuthResponse = await registerUser(userData);
       
       if (authResponse.success && authResponse.user && authResponse.token) {
         setUser(authResponse.user);
@@ -188,7 +136,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         toast({
           title: "Registration Successful!",
-          description: `Welcome to Swing Boudoir, ${authResponse.user.name}!`,
+          description: `Welcome, ${authResponse.user.name}!`,
         });
         
         // Navigate to dashboard after successful registration
@@ -260,9 +208,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     isLoading,
     isAuthenticated: isAuth,
-    login,
-    loginWithEmail,
-    register,
+    loginWithEmail: handleLoginWithEmail,
+    register: handleRegister,
     logout,
     refreshUser,
   };

@@ -1,0 +1,128 @@
+# Missing API Endpoints for Will Magazine Platform
+
+## 1. Authentication & Security
+POST /api/v1/auth/login
+POST /api/v1/auth/register  
+POST /api/v1/auth/logout
+POST /api/v1/auth/refresh-token
+POST /api/v1/auth/forgot-password
+POST /api/v1/auth/reset-password
+POST /api/v1/auth/verify-email
+
+## 2. Media/File Management
+POST /api/v1/media/upload
+GET /api/v1/media/{id}
+DELETE /api/v1/media/{id}
+POST /api/v1/profile/{id}/photos
+DELETE /api/v1/profile/{id}/photos/{photoId}
+
+## 3. Enhanced Contest Features
+GET /api/v1/contest/{id}/participants
+GET /api/v1/contest/{id}/leaderboard
+GET /api/v1/contest/{id}/stats
+POST /api/v1/contest/{id}/submit-entry
+GET /api/v1/contest/{id}/entries
+
+## 4. Payment & Subscription System
+POST /api/v1/payments/create-intent
+POST /api/v1/payments/confirm
+GET /api/v1/payments/history
+POST /api/v1/subscriptions/create
+GET /api/v1/subscriptions/status
+
+## 5. Enhanced User Features
+GET /api/v1/users/{id}/stats
+GET /api/v1/users/{id}/achievements
+POST /api/v1/users/{id}/follow
+DELETE /api/v1/users/{id}/follow
+GET /api/v1/users/{id}/followers
+GET /api/v1/users/{id}/following
+
+## 6. Content Management
+GET /api/v1/content/rules
+GET /api/v1/content/faq
+GET /api/v1/content/terms
+GET /api/v1/content/privacy
+POST /api/v1/content/contact
+
+## 7. Analytics & Reporting
+GET /api/v1/analytics/contest/{id}
+GET /api/v1/analytics/user/{id}
+GET /api/v1/analytics/platform
+POST /api/v1/reports/create
+GET /api/v1/reports/{id}
+
+## 8. Spin Wheel Feature
+POST /api/v1/spin-wheel/spin
+GET /api/v1/spin-wheel/prizes
+GET /api/v1/spin-wheel/history
+POST /api/v1/spin-wheel/claim-prize
+GET /api/v1/spin-wheel/daily-spin
+POST /api/v1/spin-wheel/share-bonus
+
+## 9. Enhanced Voting System
+GET /api/v1/votes/history
+GET /api/v1/votes/analytics
+POST /api/v1/votes/bulk
+GET /api/v1/votes/leaderboard
+
+## 10. Social Features
+POST /api/v1/comments/create
+GET /api/v1/comments/{contestId}
+DELETE /api/v1/comments/{id}
+POST /api/v1/likes/toggle
+GET /api/v1/likes/{profileId}
+
+## 11. Prize & Reward Management
+GET /api/v1/prizes/available
+POST /api/v1/prizes/claim
+GET /api/v1/prizes/history
+POST /api/v1/prizes/redeem
+
+## 12. Admin & Moderation
+GET /api/v1/admin/users
+PATCH /api/v1/admin/users/{id}/status
+GET /api/v1/admin/contests
+PATCH /api/v1/admin/contests/{id}/status
+POST /api/v1/admin/reports/{id}/resolve
+
+## 13. Search & Discovery
+GET /api/v1/search/profiles
+GET /api/v1/search/contests
+GET /api/v1/search/users
+GET /api/v1/discover/featured
+GET /api/v1/discover/trending
+
+## 14. Email & Communication
+POST /api/v1/email/send
+POST /api/v1/email/verify
+GET /api/v1/email/preferences
+PATCH /api/v1/email/preferences
+
+## 15. Webhook & Integration
+POST /api/v1/webhooks/payment
+POST /api/v1/webhooks/email
+GET /api/v1/integrations/status
+POST /api/v1/integrations/configure
+
+## Priority Levels:
+
+### HIGH PRIORITY (Essential for MVP)
+- Authentication & Security
+- Media/File Management
+- Payment & Subscription System
+- Spin Wheel Feature
+
+### MEDIUM PRIORITY (Important for UX)
+- Enhanced Contest Features
+- Enhanced User Features
+- Analytics & Reporting
+- Enhanced Voting System
+
+### LOW PRIORITY (Nice to have)
+- Social Features
+- Content Management
+- Admin & Moderation
+- Search & Discovery
+- Email & Communication
+- Webhook & Integration 
