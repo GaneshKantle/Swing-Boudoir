@@ -172,7 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name,
           username,
           image: null,
-          callbackURL: getCallbackUrl('/verify-email')
+          callbackURL: '/verify-email'
         })
       });
 
