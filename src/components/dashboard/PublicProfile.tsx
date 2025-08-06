@@ -5,13 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Share, ExternalLink, Eye, Users, Trophy, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
-
-// API endpoints for real data integration
-const API_ENDPOINTS = {
-  getUserProfile: '/api/user/profile',
-  getUserCompetitions: '/api/user/competitions',
-  getUserStats: '/api/user/stats'
-};
+import { useCompetitions } from "@/hooks/useCompetitions";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Types for API responses
 interface UserProfile {
@@ -28,16 +23,6 @@ interface UserStats {
   votesNeededForFirst: number;
 }
 
-interface Competition {
-  id: number;
-  name: string;
-  endDate: string;
-  prize: string;
-  currentVotes: number;
-  ranking: number;
-  status: 'active' | 'ended' | 'upcoming';
-}
-
 // Mock data for development - replace with API calls
 const mockProfile: UserProfile = {
   name: "Jazira Murphy",
@@ -45,22 +30,35 @@ const mockProfile: UserProfile = {
   modelId: "LXoab"
 };
 
-const mockStats: UserStats = {
-  totalVotes: 0,
-  ranking: 0,
-  totalParticipants: 0,
-  votesNeededForFirst: 0
-};
-
-const mockCompetitions: Competition[] = [];
-
 export function PublicProfile() {
   const [profile, setProfile] = useState<UserProfile>(mockProfile);
-  const [stats, setStats] = useState<UserStats>(mockStats);
-  const [competitions, setCompetitions] = useState<Competition[]>(mockCompetitions);
-  const [timeLeft, setTimeLeft] = useState<{ [key: number]: string }>({});
+  const [timeLeft, setTimeLeft] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { 
+    getModelRegistrations, 
+    getCompetitionById, 
+    getActiveCompetitions,
+    getComingSoonCompetitions,
+    getEndedCompetitions,
+    isModelRegistered
+  } = useCompetitions();
+
+  // Get model's competition registrations
+  const modelRegistrations = user ? getModelRegistrations(user.id) : [];
+  const activeCompetitions = getActiveCompetitions();
+  const comingSoonCompetitions = getComingSoonCompetitions();
+  const endedCompetitions = getEndedCompetitions();
+
+  // Calculate stats from registrations
+  const stats = {
+    totalVotes: modelRegistrations.reduce((sum, reg) => sum + reg.currentVotes, 0),
+    ranking: modelRegistrations.length > 0 ? 
+      Math.min(...modelRegistrations.map(reg => reg.ranking || 0)) : 0,
+    totalParticipants: activeCompetitions.length + comingSoonCompetitions.length,
+    votesNeededForFirst: 0 // TODO: Calculate based on competition requirements
+  };
 
   // Fetch user data on component mount
   useEffect(() => {
@@ -68,24 +66,9 @@ export function PublicProfile() {
       try {
         setIsLoading(true);
         
-        // TODO: Replace with actual API calls
-        // const profileResponse = await fetch(API_ENDPOINTS.getUserProfile);
-        // const statsResponse = await fetch(API_ENDPOINTS.getUserStats);
-        // const competitionsResponse = await fetch(API_ENDPOINTS.getUserCompetitions);
-        
-        // const profileData = await profileResponse.json();
-        // const statsData = await statsResponse.json();
-        // const competitionsData = await competitionsResponse.json();
-        
-        // setProfile(profileData);
-        // setStats(statsData);
-        // setCompetitions(competitionsData);
-        
-        // For now, using mock data
+        // TODO: Replace with actual API calls for profile data
         await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
         setProfile(mockProfile);
-        setStats(mockStats);
-        setCompetitions(mockCompetitions);
         
       } catch (error) {
         console.error('Failed to fetch user data:', error);
@@ -102,13 +85,30 @@ export function PublicProfile() {
     fetchUserData();
   }, [toast]);
 
+  // Listen for registration changes
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'modelRegistrations') {
+        // Force re-render by updating a state
+        setProfile(prev => ({ ...prev }));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Countdown timer for competitions
   useEffect(() => {
     const timer = setInterval(() => {
-      const newTimeLeft: { [key: number]: string } = {};
-      competitions.forEach(comp => {
+      const newTimeLeft: { [key: string]: string } = {};
+      
+      // Timer for all competitions (active, coming soon, ended)
+      const allCompetitions = [...activeCompetitions, ...comingSoonCompetitions, ...endedCompetitions];
+      
+      allCompetitions.forEach(competition => {
         const now = new Date().getTime();
-        const end = new Date(comp.endDate).getTime();
+        const end = new Date(competition.endDate).getTime();
         const difference = end - now;
 
         if (difference > 0) {
@@ -117,16 +117,16 @@ export function PublicProfile() {
           const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
           const seconds = Math.floor((difference % (1000 * 60)) / 1000);
           
-          newTimeLeft[comp.id] = `${days.toString().padStart(2, '0')} : ${hours.toString().padStart(2, '0')} : ${minutes.toString().padStart(2, '0')} : ${seconds.toString().padStart(2, '0')}`;
+          newTimeLeft[competition.id] = `${days.toString().padStart(2, '0')} : ${hours.toString().padStart(2, '0')} : ${minutes.toString().padStart(2, '0')} : ${seconds.toString().padStart(2, '0')}`;
         } else {
-          newTimeLeft[comp.id] = "Ended";
+          newTimeLeft[competition.id] = "Ended";
         }
       });
       setTimeLeft(newTimeLeft);
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [competitions]);
+  }, [activeCompetitions, comingSoonCompetitions, endedCompetitions]);
 
   const shareProfile = async () => {
     const url = window.location.href;
@@ -203,8 +203,8 @@ export function PublicProfile() {
               <div className="text-xs text-muted-foreground">Current Rank</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-primary">{stats.totalParticipants}</div>
-              <div className="text-xs text-muted-foreground">Participants</div>
+              <div className="text-lg font-bold text-primary">{modelRegistrations.length}</div>
+              <div className="text-xs text-muted-foreground">Registered</div>
             </div>
           </div>
         </CardContent>
@@ -231,44 +231,132 @@ export function PublicProfile() {
         </CardContent>
       </Card>
 
-      {/* Competitions */}
+      {/* Registered Competitions */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="font-semibold text-sm">Active Competitions</h3>
+              <h3 className="font-semibold text-sm">Your Competitions</h3>
               <p className="text-xs text-muted-foreground">
-                {competitions.length} competition{competitions.length !== 1 ? 's' : ''} active
+                {modelRegistrations.length} registered competitions
               </p>
             </div>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </div>
           
-          {competitions.length === 0 ? (
+          {modelRegistrations.length === 0 ? (
             <div className="text-center py-6">
               <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No active competitions</p>
+              <p className="text-sm text-muted-foreground">No competitions registered</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Check back later for new opportunities
+                Register for competitions to start participating
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {competitions.map((competition) => (
-                <div key={competition.id} className="border rounded-md p-3">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <h4 className="font-medium text-xs">{competition.name}</h4>
-                    <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                      Rank #{competition.ranking}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-1.5">{competition.prize}</p>
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <Clock className="mr-1 h-3 w-3" />
-                    <span>{timeLeft[competition.id] || "Loading..."}</span>
-                  </div>
-                </div>
-              ))}
+            <div className="space-y-4">
+              {/* Registered Active Competitions */}
+              {modelRegistrations
+                .filter(reg => {
+                  const competition = getCompetitionById(reg.competitionId);
+                  return competition && competition.status === 'active';
+                })
+                .map((registration) => {
+                  const competition = getCompetitionById(registration.competitionId);
+                  if (!competition) return null;
+                  
+                  return (
+                    <div key={registration.competitionId} className="border rounded-md p-3 bg-green-50">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <h5 className="font-medium text-xs">{competition.title}</h5>
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-green-100 text-green-800">
+                            Active
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                            Rank #{registration.ranking || 'N/A'}
+                          </Badge>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-1.5">{competition.prize}</p>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center">
+                          <Clock className="mr-1 h-3 w-3" />
+                          <span>{timeLeft[competition.id] || "Loading..."}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Trophy className="mr-1 h-3 w-3" />
+                          <span>{registration.currentVotes || 0} votes</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {/* Registered Coming Soon Competitions */}
+              {modelRegistrations
+                .filter(reg => {
+                  const competition = getCompetitionById(reg.competitionId);
+                  return competition && competition.status === 'coming-soon';
+                })
+                .map((registration) => {
+                  const competition = getCompetitionById(registration.competitionId);
+                  if (!competition) return null;
+                  
+                  return (
+                    <div key={registration.competitionId} className="border rounded-md p-3 bg-blue-50">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <h5 className="font-medium text-xs">{competition.title}</h5>
+                        <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800">
+                          Coming Soon
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-1.5">{competition.prize}</p>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center">
+                          <Clock className="mr-1 h-3 w-3" />
+                          <span>{timeLeft[competition.id] || "Loading..."}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Trophy className="mr-1 h-3 w-3" />
+                          <span>0 votes</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {/* Registered Ended Competitions */}
+              {modelRegistrations
+                .filter(reg => {
+                  const competition = getCompetitionById(reg.competitionId);
+                  return competition && competition.status === 'ended';
+                })
+                .map((registration) => {
+                  const competition = getCompetitionById(registration.competitionId);
+                  if (!competition) return null;
+                  
+                  return (
+                    <div key={registration.competitionId} className="border rounded-md p-3 bg-gray-50">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <h5 className="font-medium text-xs">{competition.title}</h5>
+                        <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-gray-100 text-gray-800">
+                          Ended
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-1.5">{competition.prize}</p>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center">
+                          <Clock className="mr-1 h-3 w-3" />
+                          <span>Ended</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Trophy className="mr-1 h-3 w-3" />
+                          <span>{registration.currentVotes || 0} votes</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           )}
         </CardContent>

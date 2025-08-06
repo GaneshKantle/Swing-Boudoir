@@ -1,0 +1,267 @@
+# API Endpoints Integration Documentation
+
+## Overview
+This document lists all the API endpoints implemented throughout the Swing Boudoir application, organized by functionality and component.
+
+## Authentication Endpoints (Better Auth)
+
+### Base URL: https://api.swingboudoirmag.com/api/v1/auth
+
+| Endpoint | Method | Description | Used In |
+|----------|--------|-------------|---------|
+| `/sign-up/email` | POST | User registration with email/password | AuthModal.tsx, AuthContext.tsx |
+| `/sign-in/email` | POST | User login with email/password | AuthModal.tsx, AuthContext.tsx |
+| `/sign-in/social` | POST | Social authentication | AuthContext.tsx |
+| `/sign-out` | POST | User logout | AuthContext.tsx |
+| `/get-session` | GET | Get current session | AuthContext.tsx |
+| `/update-user` | POST | Update user profile | AuthContext.tsx |
+| `/change-password` | POST | Change user password | AuthContext.tsx |
+| `/delete-user` | POST | Delete user account | AuthContext.tsx |
+| `/request-password-reset` | POST | Request password reset | AuthContext.tsx |
+| `/reset-password` | POST | Reset password with token | AuthContext.tsx |
+| `/send-verification-email` | POST | Send email verification | AuthContext.tsx |
+| `/verify-email` | GET | Verify email with token | AuthContext.tsx |
+| `/link-social` | POST | Link social account | AuthContext.tsx |
+| `/list-sessions` | GET | List all user sessions | AuthContext.tsx |
+| `/revoke-session` | POST | Revoke specific session | AuthContext.tsx |
+| `/revoke-sessions` | POST | Revoke all sessions | AuthContext.tsx |
+| `/revoke-other-sessions` | POST | Revoke other sessions | AuthContext.tsx |
+
+## User Management Endpoints
+
+### Base URL: /api/v1
+
+| Endpoint | Method | Description | Used In |
+|----------|--------|-------------|---------|
+| `/users` | GET | Get all users (paginated) | Admin pages |
+| `/users` | POST | Create new user | Admin pages |
+| `/users/{id}` | GET | Get specific user | AuthContext.tsx |
+| `/users/{id}` | PATCH | Update specific user | Admin pages |
+| `/users/{id}` | DELETE | Delete specific user | Admin pages |
+| `/users/{id}/profile` | GET | Get user profile | AuthContext.tsx, OnboardingContext.tsx |
+
+## Profile Management Endpoints
+
+### Base URL: /api/v1
+
+| Endpoint | Method | Description | Used In |
+|----------|--------|-------------|---------|
+| `/profile` | GET | Get all profiles (paginated) | Admin pages |
+| `/profile` | POST | Create new profile | OnboardingContext.tsx |
+| `/profile/{id}` | GET | Get specific profile | Profile pages |
+| `/profile/{id}` | PATCH | Update specific profile | EditProfile.tsx |
+| `/profile/{id}` | DELETE | Delete specific profile | Admin pages |
+| `/profile/portfolio` | POST | Upload portfolio photos | ProfileSetupStep.tsx |
+
+## Notification Endpoints
+
+### Base URL: /api/v1
+
+| Endpoint | Method | Description | Used In |
+|----------|--------|-------------|---------|
+| `/notifications` | GET | Get user notifications (paginated) | DashboardNotifications.tsx |
+| `/notifications` | POST | Create new notification | CompetitionCard.tsx |
+| `/notifications/{id}` | GET | Get specific notification | DashboardNotifications.tsx |
+
+## File Upload Endpoints
+
+### Base URL: /api/v1
+
+| Endpoint | Method | Description | Used In |
+|----------|--------|-------------|---------|
+| `/upload` | POST | Upload files (images) | ProfileSetupStep.tsx |
+
+## Competition Management Endpoints
+
+### Base URL: /api/v1
+
+| Endpoint | Method | Description | Used In |
+|----------|--------|-------------|---------|
+| `/contests/join` | POST | Register for competition | CompetitionCard.tsx |
+
+## Component-Specific API Usage
+
+### AuthContext.tsx
+- **Authentication Flow**: Uses Better Auth endpoints for login, register, session management
+- **Profile Checking**: Uses `/api/v1/users/{id}/profile` to check if user needs onboarding
+- **Session Management**: Handles token storage and session validation
+
+### AuthModal.tsx
+- **Login**: Calls `/sign-in/email` endpoint
+- **Registration**: Calls `/sign-up/email` endpoint
+- **Error Handling**: Displays authentication errors from API responses
+
+### CompetitionCard.tsx
+- **Registration**: Calls `/api/v1/contests/join` to register for competitions
+- **Notifications**: Creates notifications via `/api/v1/notifications` after successful registration
+- **Real-time Updates**: Dispatches storage events for immediate UI updates
+
+### ProfileSetupStep.tsx
+- **Photo Upload**: Uses `/api/v1/upload` for profile and portfolio photos
+- **Multiple Upload**: Handles up to 20 portfolio photos with batch processing
+- **Progress Tracking**: Shows upload progress and handles errors
+
+### OnboardingContext.tsx
+- **Profile Creation**: Uses `/api/v1/profile` to create user profile
+- **Portfolio Upload**: Uses `/api/v1/profile/portfolio` for portfolio photos
+- **Data Validation**: Validates required fields before API calls
+
+### DashboardNotifications.tsx
+- **Notification Loading**: Uses `/api/v1/notifications` to load user notifications
+- **Real-time Updates**: Listens for storage events to update notifications
+- **Mark as Read**: Updates notification status locally and via API
+
+### EditProfile.tsx
+- **Profile Updates**: Uses `/api/v1/profile/{id}` PATCH endpoint
+- **Photo Upload**: Uses `/api/v1/upload` for new profile photos
+- **Data Synchronization**: Updates local state after successful API calls
+
+## Error Handling Patterns
+
+### Authentication Errors
+```typescript
+// AuthContext.tsx
+catch (error) {
+  const errorData = await response.json();
+  setError(errorData.message || 'Authentication failed');
+  throw error;
+}
+```
+
+### Upload Errors
+```typescript
+// ProfileSetupStep.tsx
+catch (error) {
+  toast({
+    title: "Upload failed",
+    description: "Please try again with a different image.",
+    variant: "destructive"
+  });
+}
+```
+
+### Registration Errors
+```typescript
+// CompetitionCard.tsx
+catch (error) {
+  toast({
+    title: "Registration Failed",
+    description: error instanceof Error ? error.message : "Please try again later.",
+    variant: "destructive"
+  });
+}
+```
+
+## Real-time Updates
+
+### Storage Events
+The application uses `StorageEvent` to provide real-time updates across components:
+
+```typescript
+// Dispatch event
+window.dispatchEvent(new StorageEvent('storage', {
+  key: 'notifications',
+  newValue: JSON.stringify(notifications)
+}));
+
+// Listen for events
+window.addEventListener('storage', handleStorageChange);
+```
+
+### Components Using Real-time Updates
+- CompetitionCard.tsx: Updates registration status
+- DashboardNotifications.tsx: Updates notification list
+- PublicProfile.tsx: Updates competition registrations
+- EditProfile.tsx: Updates profile data
+
+## Security Considerations
+
+### Token Management
+- Tokens stored in localStorage
+- Automatic token refresh via session management
+- Token validation on each API call
+
+### Authorization Headers
+```typescript
+headers: {
+  'Authorization': `Bearer ${localStorage.getItem('token')}`,
+  'Content-Type': 'application/json'
+}
+```
+
+### Error Handling
+- Network error handling
+- API error response parsing
+- User-friendly error messages
+- Fallback mechanisms for failed requests
+
+## API Response Patterns
+
+### Success Response
+```typescript
+{
+  "id": "string",
+  "message": "string",
+  "status": "success"
+}
+```
+
+### Error Response
+```typescript
+{
+  "message": "string",
+  "statusText": "string",
+  "status": number
+}
+```
+
+### Pagination Response
+```typescript
+{
+  "data": [...],
+  "pagination": {
+    "total": number,
+    "totalPages": number,
+    "hasNextPage": boolean,
+    "hasPreviousPage": boolean,
+    "nextPage": number,
+    "previousPage": number
+  }
+}
+```
+
+## Testing Considerations
+
+### Mock API Responses
+- Use mock data for development
+- Test error scenarios
+- Validate response formats
+
+### Network Error Handling
+- Handle offline scenarios
+- Retry failed requests
+- Show appropriate error messages
+
+## Future Enhancements
+
+### Planned API Integrations
+- Real-time notifications via WebSocket
+- Advanced search and filtering
+- Bulk operations for admin functions
+- Analytics and reporting endpoints
+
+### Performance Optimizations
+- Implement request caching
+- Add request debouncing
+- Optimize image uploads
+- Add offline support
+
+## Notes
+
+1. **Better Auth Integration**: All authentication uses Better Auth endpoints for security and reliability
+2. **Real-time Updates**: Storage events provide immediate UI updates across components
+3. **Error Handling**: Comprehensive error handling with user-friendly messages
+4. **Type Safety**: TypeScript interfaces ensure API response type safety
+5. **Security**: Bearer token authentication for all protected endpoints
+6. **Scalability**: Pagination support for large datasets
+7. **User Experience**: Loading states and progress indicators for all async operations 

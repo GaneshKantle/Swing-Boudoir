@@ -1,9 +1,10 @@
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider, ProtectedRoute } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { OnboardingProvider } from "@/contexts/OnboardingContext";
+
+// Pages
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Competitions from "./pages/Competitions";
@@ -14,37 +15,48 @@ import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
 import PublicProfilePage from "./pages/PublicProfilePage";
 import NotFound from "./pages/NotFound";
+import Onboarding from "./pages/Onboarding";
 
-const queryClient = new QueryClient();
+// Admin Pages
+import { AdminLogin } from "./admin/pages/AdminLogin";
+import { AdminRegister } from "./admin/pages/AdminRegister";
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/competitions" element={<Competitions />} />
-            <Route path="/winners" element={<Winners />} />
-            <Route path="/rules" element={<Rules />} />
-            <Route path="/faq" element={<FAQ />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/model/:modelId" element={<PublicProfilePage />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <OnboardingProvider>
+          <div className="App">
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/competitions" element={<Competitions />} />
+              <Route path="/winners" element={<Winners />} />
+              <Route path="/rules" element={<Rules />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/profile/:id" element={<PublicProfilePage />} />
+              
+              {/* Onboarding Route */}
+              <Route path="/onboarding" element={<Onboarding />} />
+              
+              {/* Protected Routes */}
+              <Route path="/dashboard/*" element={<Dashboard />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin/register" element={<AdminRegister />} />
+              
+              {/* 404 Route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <Toaster />
+          </div>
+        </OnboardingProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
 
 export default App;

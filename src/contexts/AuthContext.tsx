@@ -11,258 +11,696 @@
  * @version 1.0.0
  */
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  getCurrentUser, 
-  isAuthenticated, 
-  logout as logoutUser,
-  loginWithEmail,
-  registerUser,
-  User,
-  AuthResponse
-} from '@/lib/auth';
-import { useToast } from '@/hooks/use-toast';
+import { getAuthUrl, getCallbackUrl } from '../lib/config';
 
-// Authentication Context Interface
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  image?: string;
+  emailVerified: boolean;
+  username?: string;
+  displayUsername?: string;
+  role: 'USER' | 'ADMIN' | 'MODERATOR';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Session {
+  id: string;
+  expiresAt: string;
+  token: string;
+  createdAt: string;
+  updatedAt: string;
+  ipAddress: string;
+  userAgent: string;
+  userId: string;
+  role: string;
+}
+
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
+  session: Session | null;
   isAuthenticated: boolean;
-  loginWithEmail: (credentials: { email: string; password: string }) => Promise<void>;
-  register: (userData: { name: string; email: string; password: string }) => Promise<void>;
-  logout: () => void;
-  refreshUser: () => void;
+  isLoading: boolean;
+  error: string | null;
+  
+  // Authentication methods
+  handleRegister: (email: string, password: string, name: string, username: string) => Promise<void>;
+  handleLoginWithEmail: (email: string, password: string) => Promise<void>;
+  handleLogout: () => Promise<void>;
+  checkUserNeedsOnboarding: (userId: string) => Promise<boolean>;
+  
+  // Session management
+  getSession: () => Promise<void>;
+  updateUser: (data: { name?: string; image?: string }) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  deleteUser: (password: string) => Promise<void>;
+  
+  // Password reset
+  requestPasswordReset: (email: string) => Promise<void>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
+  
+  // Email verification
+  sendVerificationEmail: (email: string) => Promise<void>;
+  verifyEmail: (token: string) => Promise<void>;
+  
+  // Social authentication
+  signInWithSocial: (provider: string, idToken?: string) => Promise<void>;
+  linkSocialAccount: (provider: string) => Promise<void>;
+  
+  // Session management
+  listSessions: () => Promise<Session[]>;
+  revokeSession: (token: string) => Promise<void>;
+  revokeAllSessions: () => Promise<void>;
+  revokeOtherSessions: () => Promise<void>;
 }
 
-// Create the context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Auth Provider Props
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-/**
- * Authentication Provider Component
- * Manages global authentication state and provides auth methods to child components
- */
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAuth, setIsAuth] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { toast } = useToast();
 
-  /**
-   * Initialize authentication state on component mount
-   */
-  useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        // Check if user is already authenticated
-        const currentUser = getCurrentUser();
-        const authenticated = isAuthenticated();
-        
-        if (authenticated && currentUser) {
-          setUser(currentUser);
-          setIsAuth(true);
-        }
-      } catch (error) {
-        console.error('Authentication initialization error:', error);
-        toast({
-          title: "Authentication Error",
-          description: "Failed to initialize authentication. Please refresh the page.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initializeAuth();
-  }, [toast]);
-
-  /**
-   * Handle email/password login
-   */
-  const handleLoginWithEmail = async (credentials: { email: string; password: string }): Promise<void> => {
+  // Get current session
+  const getSession = async () => {
     try {
-      setIsLoading(true);
-      
-      const authResponse: AuthResponse = await loginWithEmail(credentials);
-      
-      if (authResponse.success && authResponse.user && authResponse.token) {
-        setUser(authResponse.user);
-        setIsAuth(true);
-        
-        toast({
-          title: "Login Successful!",
-          description: `Welcome back, ${authResponse.user.name}!`,
-        });
-        
-        // Navigate to dashboard after successful login
-        navigate('/dashboard');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch(getAuthUrl('/get-session'), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+        setSession(data.session);
+        setIsAuthenticated(true);
+        localStorage.setItem('token', data.session.token);
       } else {
-        throw new Error(authResponse.error || 'Login failed');
+        // Session expired or invalid
+        localStorage.removeItem('token');
+        setUser(null);
+        setSession(null);
+        setIsAuthenticated(false);
       }
     } catch (error) {
-      console.error('Login error:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Login failed';
-      
-      toast({
-        title: "Login Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      console.error('Error getting session:', error);
+      localStorage.removeItem('token');
+      setUser(null);
+      setSession(null);
+      setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * Handle user registration
-   */
-  const handleRegister = async (userData: { name: string; email: string; password: string }): Promise<void> => {
+  // Check if user needs onboarding
+  const checkUserNeedsOnboarding = async (userId: string): Promise<boolean> => {
     try {
+      const token = localStorage.getItem('token');
+      if (!token) return true;
+
+      const response = await fetch(`https://api.swingboudoirmag.com/api/v1/users/${userId}/profile`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const profile = await response.json();
+        return !profile; // Return true if profile doesn't exist (needs onboarding)
+      }
+      return true; // If error, assume needs onboarding
+    } catch (error) {
+      console.error('Error checking user profile:', error);
+      return true;
+    }
+  };
+
+  // Register user
+  const handleRegister = async (email: string, password: string, name: string, username: string) => {
+    try {
+      setError(null);
       setIsLoading(true);
       
-      const authResponse: AuthResponse = await registerUser(userData);
+      const response = await fetch(getAuthUrl('/sign-up/email'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          username,
+          image: null,
+          callbackURL: getCallbackUrl('/verify-email')
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Registration failed');
+      }
+
+      const data = await response.json();
+      setUser(data.user);
+      setSession(data.session);
+      setIsAuthenticated(true);
+      localStorage.setItem('token', data.session.token);
       
-      if (authResponse.success && authResponse.user && authResponse.token) {
-        setUser(authResponse.user);
-        setIsAuth(true);
-        
-        toast({
-          title: "Registration Successful!",
-          description: `Welcome, ${authResponse.user.name}!`,
-        });
-        
-        // Navigate to dashboard after successful registration
-        navigate('/dashboard');
+      // Check if user needs onboarding
+      const needsOnboarding = await checkUserNeedsOnboarding(data.user.id);
+      if (needsOnboarding) {
+        navigate('/onboarding');
       } else {
-        throw new Error(authResponse.error || 'Registration failed');
+        navigate('/dashboard');
       }
     } catch (error) {
       console.error('Registration error:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
-      
-      toast({
-        title: "Registration Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      setError(error instanceof Error ? error.message : 'Registration failed');
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * Handle user logout
-   */
-  const logout = (): void => {
+  // Login with email
+  const handleLoginWithEmail = async (email: string, password: string) => {
     try {
-      // Clear authentication state
-      logoutUser();
-      setUser(null);
-      setIsAuth(false);
+      setError(null);
+      setIsLoading(true);
       
-      toast({
-        title: "Logged Out",
-        description: "You have been successfully logged out.",
+      const response = await fetch(getAuthUrl('/sign-in/email'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          password
+        })
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Login failed');
+      }
+
+      const data = await response.json();
+      setUser(data.user);
+      setSession(data.session);
+      setIsAuthenticated(true);
+      localStorage.setItem('token', data.session.token);
       
-      // Navigate to home page
-      navigate('/');
+      // Check if user needs onboarding
+      const needsOnboarding = await checkUserNeedsOnboarding(data.user.id);
+      if (needsOnboarding) {
+        navigate('/onboarding');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError(error instanceof Error ? error.message : 'Login failed');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Logout
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await fetch(getAuthUrl('/sign-out'), {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
     } catch (error) {
       console.error('Logout error:', error);
-      
-      toast({
-        title: "Logout Error",
-        description: "An error occurred during logout. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  /**
-   * Refresh user data from session storage
-   */
-  const refreshUser = (): void => {
-    const currentUser = getCurrentUser();
-    const authenticated = isAuthenticated();
-    
-    if (authenticated && currentUser) {
-      setUser(currentUser);
-      setIsAuth(true);
-    } else {
+    } finally {
+      localStorage.removeItem('token');
       setUser(null);
-      setIsAuth(false);
+      setSession(null);
+      setIsAuthenticated(false);
+      navigate('/');
     }
   };
 
-  // Context value
-  const contextValue: AuthContextType = {
+  // Update user
+  const updateUser = async (data: { name?: string; image?: string }) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token');
+
+      const response = await fetch(getAuthUrl('/update-user'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Update failed');
+      }
+
+      const updatedUser = await response.json();
+      setUser(updatedUser);
+    } catch (error) {
+      console.error('Update user error:', error);
+      setError(error instanceof Error ? error.message : 'Update failed');
+      throw error;
+    }
+  };
+
+  // Change password
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token');
+
+      const response = await fetch(getAuthUrl('/change-password'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Password change failed');
+      }
+    } catch (error) {
+      console.error('Change password error:', error);
+      setError(error instanceof Error ? error.message : 'Password change failed');
+      throw error;
+    }
+  };
+
+  // Delete user
+  const deleteUser = async (password: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token');
+
+      const response = await fetch(getAuthUrl('/delete-user'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ password })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Account deletion failed');
+      }
+
+      localStorage.removeItem('token');
+      setUser(null);
+      setSession(null);
+      setIsAuthenticated(false);
+      navigate('/');
+    } catch (error) {
+      console.error('Delete user error:', error);
+      setError(error instanceof Error ? error.message : 'Account deletion failed');
+      throw error;
+    }
+  };
+
+  // Request password reset
+  const requestPasswordReset = async (email: string) => {
+    try {
+      const response = await fetch(getAuthUrl('/request-password-reset'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          callbackURL: getCallbackUrl('/reset-password')
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Password reset request failed');
+      }
+    } catch (error) {
+      console.error('Request password reset error:', error);
+      setError(error instanceof Error ? error.message : 'Password reset request failed');
+      throw error;
+    }
+  };
+
+  // Reset password
+  const resetPassword = async (token: string, newPassword: string) => {
+    try {
+      const response = await fetch(getAuthUrl('/reset-password'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          token,
+          newPassword
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Password reset failed');
+      }
+    } catch (error) {
+      console.error('Reset password error:', error);
+      setError(error instanceof Error ? error.message : 'Password reset failed');
+      throw error;
+    }
+  };
+
+  // Send verification email
+  const sendVerificationEmail = async (email: string) => {
+    try {
+      const response = await fetch(getAuthUrl('/send-verification-email'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          callbackURL: getCallbackUrl('/verify-email')
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Verification email send failed');
+      }
+    } catch (error) {
+      console.error('Send verification email error:', error);
+      setError(error instanceof Error ? error.message : 'Verification email send failed');
+      throw error;
+    }
+  };
+
+  // Verify email
+  const verifyEmail = async (token: string) => {
+    try {
+      const response = await fetch(getAuthUrl(`/verify-email?token=${token}`), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Email verification failed');
+      }
+
+      // Update user's email verification status
+      if (user) {
+        setUser({ ...user, emailVerified: true });
+      }
+    } catch (error) {
+      console.error('Verify email error:', error);
+      setError(error instanceof Error ? error.message : 'Email verification failed');
+      throw error;
+    }
+  };
+
+  // Sign in with social
+  const signInWithSocial = async (provider: string, idToken?: string) => {
+    try {
+      setError(null);
+      setIsLoading(true);
+      
+      const response = await fetch(getAuthUrl('/sign-in/social'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          provider,
+          idToken,
+          callbackURL: getCallbackUrl('/dashboard')
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Social login failed');
+      }
+
+      const data = await response.json();
+      setUser(data.user);
+      setSession(data.session);
+      setIsAuthenticated(true);
+      localStorage.setItem('token', data.session.token);
+      
+      // Check if user needs onboarding
+      const needsOnboarding = await checkUserNeedsOnboarding(data.user.id);
+      if (needsOnboarding) {
+        navigate('/onboarding');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error('Social login error:', error);
+      setError(error instanceof Error ? error.message : 'Social login failed');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Link social account
+  const linkSocialAccount = async (provider: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token');
+
+      const response = await fetch(getAuthUrl('/link-social'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          provider,
+          callbackURL: getCallbackUrl('/dashboard')
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Social account linking failed');
+      }
+    } catch (error) {
+      console.error('Link social account error:', error);
+      setError(error instanceof Error ? error.message : 'Social account linking failed');
+      throw error;
+    }
+  };
+
+  // List sessions
+  const listSessions = async (): Promise<Session[]> => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token');
+
+      const response = await fetch(getAuthUrl('/list-sessions'), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to list sessions');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('List sessions error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to list sessions');
+      throw error;
+    }
+  };
+
+  // Revoke session
+  const revokeSession = async (token: string) => {
+    try {
+      const authToken = localStorage.getItem('token');
+      if (!authToken) throw new Error('No authentication token');
+
+      const response = await fetch(getAuthUrl('/revoke-session'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ token })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to revoke session');
+      }
+    } catch (error) {
+      console.error('Revoke session error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to revoke session');
+      throw error;
+    }
+  };
+
+  // Revoke all sessions
+  const revokeAllSessions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token');
+
+      const response = await fetch(getAuthUrl('/revoke-sessions'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to revoke all sessions');
+      }
+
+      // Logout current session
+      localStorage.removeItem('token');
+      setUser(null);
+      setSession(null);
+      setIsAuthenticated(false);
+      navigate('/');
+    } catch (error) {
+      console.error('Revoke all sessions error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to revoke all sessions');
+      throw error;
+    }
+  };
+
+  // Revoke other sessions
+  const revokeOtherSessions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token');
+
+      const response = await fetch(getAuthUrl('/revoke-other-sessions'), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to revoke other sessions');
+      }
+    } catch (error) {
+      console.error('Revoke other sessions error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to revoke other sessions');
+      throw error;
+    }
+  };
+
+  // Initialize session on mount
+  useEffect(() => {
+    getSession();
+  }, []);
+
+  const value: AuthContextType = {
     user,
+    session,
+    isAuthenticated,
     isLoading,
-    isAuthenticated: isAuth,
-    loginWithEmail: handleLoginWithEmail,
-    register: handleRegister,
-    logout,
-    refreshUser,
+    error,
+    handleRegister,
+    handleLoginWithEmail,
+    handleLogout,
+    checkUserNeedsOnboarding,
+    getSession,
+    updateUser,
+    changePassword,
+    deleteUser,
+    requestPasswordReset,
+    resetPassword,
+    sendVerificationEmail,
+    verifyEmail,
+    signInWithSocial,
+    linkSocialAccount,
+    listSessions,
+    revokeSession,
+    revokeAllSessions,
+    revokeOtherSessions
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-/**
- * Custom hook to use authentication context
- * @returns AuthContextType - Authentication context value
- * @throws Error if used outside of AuthProvider
- */
-export const useAuth = (): AuthContextType => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
-  
   return context;
 };
 
-/**
- * Protected Route Component
- * Wraps components that require authentication
- */
-export const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate('/');
-    }
-  }, [isAuthenticated, isLoading, navigate]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <div>Loading...</div>;
   }
 
   if (!isAuthenticated) {
-    return null;
+    return <div>Please log in to access this page.</div>;
   }
 
   return <>{children}</>;

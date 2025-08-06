@@ -1,7 +1,7 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CompetitionCard from "@/components/CompetitionCard";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Grid, List } from "lucide-react";
@@ -9,65 +9,119 @@ import bigGameImage from "@/assets/big-game-competition.jpg";
 import hotGirlSummerImage from "@/assets/hot-girl-summer.jpg";
 import workoutWarriorImage from "@/assets/workout-warrior.jpg";
 
+interface Competition {
+  id: string;
+  title: string;
+  image: string;
+  prize: string;
+  endDate: string;
+  location?: string;
+  perks: string[];
+  description: string;
+  status: 'active' | 'coming-soon' | 'ended';
+  createdAt: string;
+  updatedAt: string;
+}
+
 const Competitions = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
+  const [competitions, setCompetitions] = useState<Competition[]>([]);
 
-  const competitions = [
-    {
-      id: "big-game-weekend",
-      title: "Big Game Weekend",
-      image: bigGameImage,
-      prize: "$50,000 cash prize",
-      endDate: "08/31/2025",
-      location: "Santa Clara",
-      perks: [
-        "Trip for 2 to Santa Clara",
-        "2 Tickets to Maxim Party",
-        "2 Tickets to Big Game",
-        "Become a Maxim Content Creator"
-      ],
-      description: "Join the ultimate Big Game Weekend experience with luxury accommodations and exclusive access to the biggest sporting event of the year.",
-      status: "active" as const
-    },
-    {
-      id: "hot-girl-summer",
-      title: "Hot Girl Summer - Barbados",
-      image: hotGirlSummerImage,
-      prize: "$25,000 cash prize",
-      endDate: "08/07/2025",
-      location: "Miami + Barbados",
-      perks: [
-        "Trip for 2 to Miami + Barbados",
-        "1-on-1 Influencer Masterclass",
-        "Portfolio Photoshoot",
-        "Maxim Magazine Feature"
-      ],
-      description: "Experience the ultimate tropical getaway with professional photoshoots and influencer training in paradise.",
-      status: "active" as const
-    },
-    {
-      id: "workout-warrior",
-      title: "Workout Warrior",
-      image: workoutWarriorImage,
-      prize: "$20,000 cash prize",
-      endDate: "09/27/2025",
-      location: "Miami",
-      perks: [
-        "Maxim Photoshoot",
-        "Maxim Magazine Feature",
-        "Trip to Miami",
-        "Fitness Brand Partnerships"
-      ],
-      description: "Showcase your fitness journey and dedication with professional photoshoots and brand partnership opportunities.",
-      status: "active" as const
-    }
-  ];
+  // Load competitions from localStorage on component mount
+  useEffect(() => {
+    const loadCompetitions = () => {
+      const storedCompetitions = localStorage.getItem('competitions');
+      if (storedCompetitions) {
+        setCompetitions(JSON.parse(storedCompetitions));
+      } else {
+        // Fallback to default competitions if none exist in localStorage
+        const defaultCompetitions = [
+          {
+            id: "big-game-weekend",
+            title: "Big Game Weekend",
+            image: bigGameImage,
+            prize: "$50,000 cash prize",
+            endDate: "2025-08-31",
+            location: "Santa Clara",
+            perks: [
+              "Trip for 2 to Santa Clara",
+              "2 Tickets to Maxim Party",
+              "2 Tickets to Big Game",
+              "Become a Maxim Content Creator"
+            ],
+            description: "Join the ultimate Big Game Weekend experience with luxury accommodations and exclusive access to the biggest sporting event of the year.",
+            status: "active" as const,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          {
+            id: "hot-girl-summer",
+            title: "Hot Girl Summer - Barbados",
+            image: hotGirlSummerImage,
+            prize: "$25,000 cash prize",
+            endDate: "2025-08-07",
+            location: "Miami + Barbados",
+            perks: [
+              "Trip for 2 to Miami + Barbados",
+              "1-on-1 Influencer Masterclass",
+              "Portfolio Photoshoot",
+              "Maxim Magazine Feature"
+            ],
+            description: "Experience the ultimate tropical getaway with professional photoshoots and influencer training in paradise.",
+            status: "active" as const,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          {
+            id: "workout-warrior",
+            title: "Workout Warrior",
+            image: workoutWarriorImage,
+            prize: "$20,000 cash prize",
+            endDate: "2025-09-27",
+            location: "Miami",
+            perks: [
+              "Maxim Photoshoot",
+              "Maxim Magazine Feature",
+              "Trip to Miami",
+              "Fitness Brand Partnerships"
+            ],
+            description: "Showcase your fitness journey and dedication with professional photoshoots and brand partnership opportunities.",
+            status: "active" as const,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        ];
+        setCompetitions(defaultCompetitions);
+        localStorage.setItem('competitions', JSON.stringify(defaultCompetitions));
+      }
+    };
 
-  const filteredCompetitions = competitions.filter(comp =>
-    comp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    comp.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    loadCompetitions();
+
+    // Listen for storage changes (when admin panel updates competitions)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'competitions') {
+        if (e.newValue) {
+          setCompetitions(JSON.parse(e.newValue));
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  // Filter competitions based on search query and only show active ones
+  const filteredCompetitions = competitions
+    .filter(comp => comp.status === 'active') // Only show active competitions
+    .filter(comp =>
+      comp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      comp.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   return (
     <div className="min-h-screen bg-background">
@@ -103,10 +157,6 @@ const Competitions = () => {
               </div>
 
               <div className="flex items-center space-x-4">
-                <Button variant="outline" size="sm">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filters
-                </Button>
                 
                 <div className="flex border border-border rounded-lg overflow-hidden">
                   <Button

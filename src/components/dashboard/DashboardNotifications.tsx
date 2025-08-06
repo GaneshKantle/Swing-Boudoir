@@ -2,65 +2,156 @@ import { Bell, Trophy, Users, Heart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 
-// Mock data - replace with API calls to your backend
-const mockNotifications = [
-  {
-    id: 1,
-    type: "competition",
-    title: "New Competition: Hot Girl Summer - Barbados",
-    message: "Participate in this contest/competition. Registration ends in 3 days!",
-    time: "2 hours ago",
-    unread: true,
-    icon: Trophy
-  },
-  {
-    id: 2,
-    type: "vote",
-    title: "You received 5 new votes!",
-    message: "Anonymous voted for you in Big Game Competition",
-    time: "4 hours ago",
-    unread: true,
-    icon: Heart
-  },
-  {
-    id: 3,
-    type: "winner",
-    title: "Congratulations! You won!",
-    message: "You've won the Workout Warrior contest — here's what's next: Check your prize history for details.",
-    time: "1 day ago",
-    unread: false,
-    icon: Trophy
-  },
-  {
-    id: 4,
-    type: "tip",
-    title: "Competition Tips & Tricks",
-    message: "Watch our latest video guide on how to maximize your votes and engagement.",
-    time: "2 days ago",
-    unread: false,
-    icon: Users
-  }
-];
+interface Notification {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  time: string;
+  unread: boolean;
+  icon: string;
+}
 
 export function DashboardNotifications() {
-  // TODO: Replace with actual API call
-  const fetchNotifications = async () => {
-    // const response = await fetch('/api/notifications');
-    // return response.json();
-    return mockNotifications;
-  };
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [forceUpdate, setForceUpdate] = useState(0);
+
+  // Load notifications from localStorage
+  useEffect(() => {
+    const loadNotifications = () => {
+      try {
+        const storedNotifications = localStorage.getItem('notifications');
+        if (storedNotifications) {
+          setNotifications(JSON.parse(storedNotifications));
+        } else {
+          // Initialize with default notifications if none exist
+          const defaultNotifications = [
+            {
+              id: 1,
+              type: "competition",
+              title: "New Competition: Hot Girl Summer - Barbados",
+              message: "Participate in this contest/competition. Registration ends in 3 days!",
+              time: "2 hours ago",
+              unread: true,
+              icon: "Trophy"
+            },
+            {
+              id: 2,
+              type: "vote",
+              title: "You received 5 new votes!",
+              message: "Anonymous voted for you in Big Game Competition",
+              time: "4 hours ago",
+              unread: true,
+              icon: "Heart"
+            },
+            {
+              id: 3,
+              type: "winner",
+              title: "Congratulations! You won!",
+              message: "You've won the Workout Warrior contest — here's what's next: Check your prize history for details.",
+              time: "1 day ago",
+              unread: false,
+              icon: "Trophy"
+            },
+            {
+              id: 4,
+              type: "tip",
+              title: "Competition Tips & Tricks",
+              message: "Watch our latest video guide on how to maximize your votes and engagement.",
+              time: "2 days ago",
+              unread: false,
+              icon: "Users"
+            }
+          ];
+          setNotifications(defaultNotifications);
+          localStorage.setItem('notifications', JSON.stringify(defaultNotifications));
+        }
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+      }
+    };
+
+    loadNotifications();
+
+    // Listen for storage changes (when new notifications are created)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'notifications') {
+        if (e.newValue) {
+          setNotifications(JSON.parse(e.newValue));
+          // Force re-render
+          setForceUpdate(prev => prev + 1);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const markAsRead = async (notificationId: number) => {
-    // TODO: API call to mark notification as read
-    console.log(`Marking notification ${notificationId} as read`);
-    // await fetch(`/api/notifications/${notificationId}/read`, { method: 'POST' });
+    const updatedNotifications = notifications.map(notification => 
+      notification.id === notificationId 
+        ? { ...notification, unread: false }
+        : notification
+    );
+    
+    localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+    setNotifications(updatedNotifications);
+    
+    // Dispatch storage event to notify other components
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'notifications',
+      newValue: JSON.stringify(updatedNotifications)
+    }));
   };
 
   const markAllAsRead = async () => {
-    // TODO: API call to mark all notifications as read
-    console.log("Marking all notifications as read");
-    // await fetch('/api/notifications/read-all', { method: 'POST' });
+    const updatedNotifications = notifications.map(notification => ({
+      ...notification,
+      unread: false
+    }));
+    
+    localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+    setNotifications(updatedNotifications);
+    
+    // Dispatch storage event to notify other components
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'notifications',
+      newValue: JSON.stringify(updatedNotifications)
+    }));
+  };
+
+  const getIconComponent = (iconName: string) => {
+    switch (iconName) {
+      case 'Trophy':
+        return Trophy;
+      case 'Heart':
+        return Heart;
+      case 'Users':
+        return Users;
+      default:
+        return Bell;
+    }
+  };
+
+  const formatTime = (timeString: string) => {
+    try {
+      const time = new Date(timeString);
+      const now = new Date();
+      const diffInHours = (now.getTime() - time.getTime()) / (1000 * 60 * 60);
+      
+      if (diffInHours < 1) {
+        return 'Just now';
+      } else if (diffInHours < 24) {
+        return `${Math.floor(diffInHours)} hours ago`;
+      } else {
+        return time.toLocaleDateString();
+      }
+    } catch {
+      return timeString;
+    }
   };
 
   return (
@@ -73,8 +164,8 @@ export function DashboardNotifications() {
       </div>
 
       <div className="space-y-4">
-        {mockNotifications.map((notification) => {
-          const Icon = notification.icon;
+        {notifications.map((notification) => {
+          const Icon = getIconComponent(notification.icon);
           return (
             <Card 
               key={notification.id} 
@@ -99,7 +190,7 @@ export function DashboardNotifications() {
                     </div>
                   </div>
                   <span className="text-sm text-muted-foreground">
-                    {notification.time}
+                    {formatTime(notification.time)}
                   </span>
                 </div>
               </CardHeader>
