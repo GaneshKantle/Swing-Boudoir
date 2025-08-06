@@ -1,26 +1,19 @@
-import { useState } from "react";
-import { Menu, X, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import AuthModal from "@/components/auth/AuthModal";
+import { LogOut, Menu, User } from "lucide-react";
+import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const Header = () => {
-  const { isAuthenticated, logout, user } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [showAuthModal, setShowAuthModal] = useState(false);
-
-  // Check if we're on dashboard page
-  const isDashboardPage = location.pathname === '/dashboard';
-
-  const handleAuthClick = () => {
-    setShowAuthModal(true);
-  };
+  const isDashboardPage = location.pathname.startsWith('/dashboard');
 
   const handleLogout = () => {
     logout();
+    navigate('/');
   };
 
   // const navItems = [
@@ -68,7 +61,7 @@ const Header = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleAuthClick}
+                  onClick={() => navigate('/login')}
                   className="text-foreground hover:text-accent"
                 >
                   <User className="w-4 h-4 mr-2" />
@@ -76,7 +69,7 @@ const Header = () => {
                 </Button>
                 <Button
                   size="sm"
-                  onClick={handleAuthClick}
+                  onClick={() => navigate('/register')}
                   className="bg-gradient-competition text-competition-foreground hover:opacity-90 transition-smooth"
                 >
                   Register
@@ -135,14 +128,14 @@ const Header = () => {
                     <>
                       <Button
                         variant="outline"
-                        onClick={handleAuthClick}
+                        onClick={() => navigate('/login')}
                         className="w-full"
                       >
                         <User className="w-4 h-4 mr-2" />
                         Login
                       </Button>
                       <Button
-                        onClick={handleAuthClick}
+                        onClick={() => navigate('/register')}
                         className="w-full bg-gradient-competition text-competition-foreground"
                       >
                         Register
@@ -164,12 +157,6 @@ const Header = () => {
           </Sheet>
         </div>
       </header>
-
-      {/* Authentication Modal */}
-      <AuthModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
-      />
     </>
   );
 };

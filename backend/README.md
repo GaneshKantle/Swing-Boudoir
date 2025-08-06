@@ -40,8 +40,8 @@ Professional backend API server for the Swing Boudoir Showcase platform, featuri
    PORT=3001
    JWT_SECRET=your-super-secret-jwt-key-change-in-production
    FRONTEND_URL=http://localhost:5173
-   GOOGLE_CLIENT_ID=402560830064-ptbui16lhn92pubcv4p9fhtvogipqj05.apps.googleusercontent.com
-   GOOGLE_CLIENT_SECRET=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
+   GOOGLE_CLIENT_ID=your-google-client-id-here
+   GOOGLE_CLIENT_SECRET=your-google-client-secret-here
    ```
 
 4. **Create uploads directory**

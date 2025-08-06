@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Share, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCompetitions } from "@/hooks/useCompetitions";
 
 // Mock data - In real app, this would come from API based on modelId
 const getModelData = (modelId: string) => {
@@ -41,100 +42,52 @@ const getModelData = (modelId: string) => {
   return models[modelId as keyof typeof models] || models["LXoab"];
 };
 
-const getCompetitionsData = (modelId: string) => {
-  // Simulate different competitions based on modelId
-  const competitions = {
-    "LXoab": [
-      {
-        id: 1,
-        name: "Big Game Weekend",
-        endDate: new Date("2025-08-31T23:59:59"),
-        prize: "$50,000 cash prize",
-        location: "Santa Clara",
-        perks: [
-          "Trip for 2 to Santa Clara",
-          "2 Tickets to Maxim Party", 
-          "2 Tickets to Big Game",
-          "Become a Maxim Content Creator"
-        ],
-        currentVotes: 847,
-        ranking: 3,
-        status: "active"
-      },
-      {
-        id: 2,
-        name: "Hot Girl Summer - Barbados",
-        endDate: new Date("2025-08-07T23:59:59"),
-        prize: "$25,000 cash prize",
-        location: "Miami + Barbados",
-        perks: [
-          "Trip for 2 to Miami + Barbados",
-          "1-on-1 Influencer Masterclass",
-          "Portfolio Photoshoot",
-          "Maxim Magazine Feature"
-        ],
-        currentVotes: 400,
-        ranking: 7,
-        status: "active"
-      }
-    ],
-    "ABC123": [
-      {
-        id: 1,
-        name: "Fashion Week Elite",
-        endDate: new Date("2025-09-15T23:59:59"),
-        prize: "$75,000 cash prize",
-        location: "New York",
-        perks: [
-          "Trip for 2 to New York",
-          "Fashion Week Access",
-          "Designer Portfolio",
-          "Magazine Cover Opportunity"
-        ],
-        currentVotes: 1200,
-        ranking: 5,
-        status: "active"
-      }
-    ],
-    "XYZ789": [
-      {
-        id: 1,
-        name: "Fitness Goddess",
-        endDate: new Date("2025-10-20T23:59:59"),
-        prize: "$100,000 cash prize",
-        location: "Miami",
-        perks: [
-          "Trip for 2 to Miami",
-          "Fitness Brand Partnerships",
-          "Professional Photoshoot",
-          "Maxim Magazine Feature"
-        ],
-        currentVotes: 2156,
-        ranking: 1,
-        status: "active"
-      }
-    ]
-  };
-
-  return competitions[modelId as keyof typeof competitions] || competitions["LXoab"];
-};
-
 export default function PublicProfilePage() {
   const { modelId } = useParams<{ modelId: string }>();
-  const [timeLeft, setTimeLeft] = useState<{ [key: number]: string }>({});
+  const [timeLeft, setTimeLeft] = useState<{ [key: string]: string }>({});
   const [userVotes, setUserVotes] = useState(0);
   const [lastVoteTime, setLastVoteTime] = useState<Date | null>(null);
   const { toast } = useToast();
+  
+  // Get competitions from localStorage using useCompetitions hook
+  const { 
+    getCompetitionRegistrations, 
+    getCompetitionById, 
+    getActiveCompetitions 
+  } = useCompetitions();
 
   // Get model data based on modelId
   const modelProfile = getModelData(modelId || "LXoab");
-  const modelCompetitions = getCompetitionsData(modelId || "LXoab");
+  
+  // Get competitions this model is registered for
+  const modelRegistrations = getCompetitionRegistrations(modelId || "LXoab");
+  const activeCompetitions = getActiveCompetitions();
+  
+  // Get actual competition data for registered competitions
+  const modelCompetitions = modelRegistrations.map(registration => {
+    const competition = getCompetitionById(registration.competitionId);
+    if (!competition) return null;
+    
+    return {
+      id: competition.id,
+      name: competition.title,
+      endDate: new Date(competition.endDate), // Use real end date from admin
+      prize: competition.prize,
+      location: competition.location,
+      perks: competition.perks,
+      currentVotes: registration.currentVotes,
+      ranking: registration.ranking,
+      status: competition.status
+    };
+  }).filter(Boolean);
 
-  // Countdown timer
+  // Countdown timer using real competition end dates
   useEffect(() => {
     const timer = setInterval(() => {
-      const newTimeLeft: { [key: number]: string } = {};
+      const newTimeLeft: { [key: string]: string } = {};
       modelCompetitions.forEach(comp => {
+        if (!comp) return;
+        
         const now = new Date().getTime();
         const end = comp.endDate.getTime();
         const difference = end - now;
@@ -254,68 +207,82 @@ export default function PublicProfilePage() {
 
           {/* Right Column - Competition Details */}
           <div className="space-y-6">
-            {modelCompetitions.map((competition) => (
-              <Card key={competition.id} className="border border-gray-200">
-                <CardContent className="p-6">
-                  <div className="mb-4">
-                    <h2 className="text-xl font-bold text-gray-900 mb-2">{competition.name}</h2>
-                    <div className="text-2xl font-bold text-green-600 mb-3">{competition.prize}</div>
-                  </div>
+            {modelCompetitions.length > 0 ? (
+              modelCompetitions.map((competition) => (
+                <Card key={competition.id} className="border border-gray-200">
+                  <CardContent className="p-6">
+                    <div className="mb-4">
+                      <h2 className="text-xl font-bold text-gray-900 mb-2">{competition.name}</h2>
+                      <div className="text-2xl font-bold text-green-600 mb-3">{competition.prize}</div>
+                    </div>
 
-                  {/* Perks */}
-                  <div className="bg-gray-900 text-white p-4 rounded-lg mb-4">
-                    <div className="space-y-2">
-                      {competition.perks.map((perk, index) => (
-                        <div key={index} className="flex items-center text-sm">
-                          <span className="mr-2">•</span>
-                          {perk}
+                    {/* Perks */}
+                    <div className="bg-gray-900 text-white p-4 rounded-lg mb-4">
+                      <div className="space-y-2">
+                        {competition.perks.map((perk, index) => (
+                          <div key={index} className="flex items-center text-sm">
+                            <span className="mr-2">•</span>
+                            {perk}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Competition Info */}
+                    <div className="space-y-3 mb-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Section 1</span>
+                        <a href="#" className="text-sm text-blue-600 hover:underline">See all rounds</a>
+                      </div>
+                      
+                      <div className="text-sm text-gray-600">
+                        Rankings will be revealed after the cut off time on {competition.endDate.toLocaleDateString()}
+                      </div>
+
+                      {/* Timer */}
+                      <div className="text-center">
+                        <div className="text-sm text-gray-600 mb-2">Round ends:</div>
+                        <div className="text-2xl font-mono font-bold text-gray-900">
+                          {timeLeft[competition.id] || "Loading..."}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Competition Info */}
-                  <div className="space-y-3 mb-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Section 1</span>
-                      <a href="#" className="text-sm text-blue-600 hover:underline">See all rounds</a>
-                    </div>
-                    
-                    <div className="text-sm text-gray-600">
-                      Rankings will be revealed after the cut off time on {competition.endDate.toLocaleDateString()}
-                    </div>
-
-                    {/* Timer */}
-                    <div className="text-center">
-                      <div className="text-sm text-gray-600 mb-2">Round ends:</div>
-                      <div className="text-2xl font-mono font-bold text-gray-900">
-                        {timeLeft[competition.id] || "Loading..."}
+                        <div className="flex justify-center space-x-8 text-xs text-gray-500 mt-1">
+                          <span>Days</span>
+                          <span>Hour</span>
+                          <span>Min</span>
+                          <span>Sec</span>
+                        </div>
                       </div>
-                      <div className="flex justify-center space-x-8 text-xs text-gray-500 mt-1">
-                        <span>Days</span>
-                        <span>Hour</span>
-                        <span>Min</span>
-                        <span>Sec</span>
+
+                      <div className="text-sm text-gray-600 text-center">
+                        This entry is pausing and will not start the next round automatically.
                       </div>
                     </div>
 
-                    <div className="text-sm text-gray-600 text-center">
-                      This entry is pausing and will not start the next round automatically.
-                    </div>
-                  </div>
-
-                  {/* SWEEPSTAKES Banner */}
-                  <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-3 mb-4">
-                    <div className="text-center">
-                      <div className="font-bold text-yellow-800 mb-1">SWEEPSTAKES ACTIVE!</div>
-                      <div className="text-sm text-yellow-700">
-                        Your voters can win $5K while supporting you
+                    {/* SWEEPSTAKES Banner */}
+                    <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-3 mb-4">
+                      <div className="text-center">
+                        <div className="font-bold text-yellow-800 mb-1">SWEEPSTAKES ACTIVE!</div>
+                        <div className="text-sm text-yellow-700">
+                          Your voters can win $5K while supporting you
+                        </div>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <Card className="border border-gray-200">
+                <CardContent className="p-6 text-center">
+                  <div className="text-gray-500 mb-4">
+                    <Star className="w-12 h-12 mx-auto mb-2" />
+                    <h3 className="text-lg font-semibold mb-2">No Competitions Yet</h3>
+                    <p className="text-sm">
+                      {modelProfile.name} hasn't registered for any competitions yet.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )}
           </div>
         </div>
 

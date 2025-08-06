@@ -1,59 +1,23 @@
 import CompetitionCard from "./CompetitionCard";
-import bigGameImage from "@/assets/big-game-competition.jpg";
-import hotGirlSummerImage from "@/assets/hot-girl-summer.jpg";
-import workoutWarriorImage from "@/assets/workout-warrior.jpg";
+import { useCompetitions } from "@/hooks/useCompetitions";
+import { RefreshCw } from "lucide-react";
 
 const CompetitionsSection = () => {
-  const competitions = [
-    {
-      id: "big-game-weekend",
-      title: "Big Game Weekend",
-      image: bigGameImage,
-      prize: "$50,000 cash prize",
-      endDate: "08/31/2025",
-      location: "Santa Clara",
-      perks: [
-        "Trip for 2 to Santa Clara",
-        "2 Tickets to Maxim Party",
-        "2 Tickets to Big Game",
-        "Become a Maxim Content Creator"
-      ],
-      description: "Join the ultimate Big Game Weekend experience with luxury accommodations and exclusive access to the biggest sporting event of the year.",
-      status: "active" as const
-    },
-    {
-      id: "hot-girl-summer",
-      title: "Hot Girl Summer - Barbados",
-      image: hotGirlSummerImage,
-      prize: "$25,000 cash prize",
-      endDate: "08/07/2025",
-      location: "Miami + Barbados",
-      perks: [
-        "Trip for 2 to Miami + Barbados",
-        "1-on-1 Influencer Masterclass",
-        "Portfolio Photoshoot",
-        "Maxim Magazine Feature"
-      ],
-      description: "Experience the ultimate tropical getaway with professional photoshoots and influencer training in paradise.",
-      status: "active" as const
-    },
-    {
-      id: "workout-warrior",
-      title: "Workout Warrior",
-      image: workoutWarriorImage,
-      prize: "$20,000 cash prize",
-      endDate: "09/27/2025",
-      location: "Miami",
-      perks: [
-        "Maxim Photoshoot",
-        "Maxim Magazine Feature",
-        "Trip to Miami",
-        "Fitness Brand Partnerships"
-      ],
-      description: "Showcase your fitness journey and dedication with professional photoshoots and brand partnership opportunities.",
-      status: "active" as const
-    }
-  ];
+  const { getActiveCompetitions, isLoading } = useCompetitions();
+  const competitions = getActiveCompetitions();
+
+  if (isLoading) {
+    return (
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading competitions...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-20 bg-muted/30">
@@ -69,11 +33,20 @@ const CompetitionsSection = () => {
         </div>
 
         {/* Competitions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {competitions.map((competition) => (
-            <CompetitionCard key={competition.id} {...competition} />
-          ))}
-        </div>
+        {competitions.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {competitions.map((competition) => (
+              <CompetitionCard key={competition.id} competition={competition} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <h3 className="text-xl font-semibold mb-2">No Active Competitions</h3>
+            <p className="text-muted-foreground">
+              Check back soon for exciting new competitions!
+            </p>
+          </div>
+        )}
 
         {/* More Competitions CTA */}
         <div className="text-center mt-16">

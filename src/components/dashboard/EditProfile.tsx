@@ -1,13 +1,16 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Edit, Save, Trash2, X } from "lucide-react";
+import { Upload, Edit, Save, Trash2, X, Trophy, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUploadThing, uploadFiles } from "@/lib/uploadthing";
+import { useCompetitions } from "@/hooks/useCompetitions";
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 
 // Mock data - replace with API calls
 const mockProfile = {
@@ -35,8 +38,26 @@ export function EditProfile() {
   const [votingImages, setVotingImages] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { getModelRegistrations, getCompetitionById } = useCompetitions();
   const profileFileInputRef = useRef<HTMLInputElement>(null);
   const votingFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Get user's registered competitions
+  const modelRegistrations = user ? getModelRegistrations(user.id) : [];
+
+  // Listen for registration changes
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'modelRegistrations') {
+        // Force re-render by updating a state
+        setProfile(prev => ({ ...prev }));
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const { startUpload, routeConfig } = useUploadThing("profileImages", {
     // onClientUploadComplete: () => {
@@ -379,23 +400,60 @@ export function EditProfile() {
       {/* Competition Enrollments */}
       <Card>
         <CardHeader>
-          <CardTitle>Competition Enrollments</CardTitle>
+          <CardTitle className="flex items-center">
+            <Trophy className="mr-2 h-5 w-5" />
+            Competition Enrollments ({modelRegistrations.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {/* Mock competition data */}
-            <div className="border rounded-lg p-4">
-              <h4 className="font-semibold">Hot Girl Summer - Barbados</h4>
-              <p className="text-sm text-muted-foreground">Grand Prize: $500,000 cash prize, 2 tickets to Barbados</p>
-              <div className="mt-2 flex gap-2">
-                <Button variant="outline" size="sm">View Details</Button>
-                <Button variant="outline" size="sm">
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit Photos
-                </Button>
-              </div>
+          {modelRegistrations.length === 0 ? (
+            <div className="text-center py-8">
+              <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h4 className="text-lg font-semibold mb-2">No Competitions Registered</h4>
+              <p className="text-muted-foreground mb-4">
+                You haven't registered for any competitions yet.
+              </p>
+              <Button variant="outline" onClick={() => window.location.href = '/competitions'}>
+                Browse Competitions
+              </Button>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              {modelRegistrations.map((registration) => {
+                const competition = getCompetitionById(registration.competitionId);
+                if (!competition) return null;
+
+                return (
+                  <div key={registration.competitionId} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold">{competition.title}</h4>
+                      <Badge variant={competition.status === 'active' ? 'default' : 'secondary'}>
+                        {competition.status === 'active' ? 'Active' : competition.status === 'coming-soon' ? 'Coming Soon' : 'Ended'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">{competition.prize}</p>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
+                      <div className="flex items-center">
+                        <Calendar className="mr-1 h-4 w-4" />
+                        <span>Registered: {new Date(registration.registeredAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Trophy className="mr-1 h-4 w-4" />
+                        <span>{registration.currentVotes || 0} votes</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm">View Details</Button>
+                      <Button variant="outline" size="sm">
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Photos
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

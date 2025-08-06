@@ -37,6 +37,11 @@ export interface User {
   updatedAt: string;
 }
 
+// Stored User Interface (includes password for localStorage)
+interface StoredUser extends User {
+  password: string;
+}
+
 // Authentication Response Interface
 export interface AuthResponse {
   success: boolean;
@@ -52,28 +57,48 @@ export interface AuthResponse {
  */
 export const registerUser = async (userData: { name: string; email: string; password: string }): Promise<AuthResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(userData),
-    });
-
-    const result: AuthResponse = await response.json();
-
-    if (result.success && result.token) {
-      // Store token in memory (not localStorage for security)
-      sessionStorage.setItem('authToken', result.token);
-      sessionStorage.setItem('userData', JSON.stringify(result.user));
-      
-      // Set up automatic token refresh
-      setupTokenRefresh(result.token);
-      
-      return result;
-    } else {
-      throw new Error(result.error || 'Registration failed');
+    // Get existing users from localStorage
+    const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    
+    // Check if email already exists
+    const emailExists = existingUsers.some((user: StoredUser) => user.email === userData.email);
+    if (emailExists) {
+      return {
+        success: false,
+        error: 'An account with this email already exists'
+      };
     }
+
+    // Create new user
+    const newUser: User = {
+      id: `user_${Date.now()}`,
+      email: userData.email,
+      name: userData.name,
+      picture: undefined,
+      isVerified: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Create a simple token (in real app, this would be a JWT)
+    const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Add user to localStorage
+    existingUsers.push({
+      ...newUser,
+      password: userData.password // In real app, this would be hashed
+    });
+    localStorage.setItem('users', JSON.stringify(existingUsers));
+
+    // Store authentication data
+    sessionStorage.setItem('authToken', token);
+    sessionStorage.setItem('userData', JSON.stringify(newUser));
+    
+    return {
+      success: true,
+      user: newUser,
+      token: token
+    };
   } catch (error) {
     console.error('Registration error:', error);
     return {
@@ -90,28 +115,49 @@ export const registerUser = async (userData: { name: string; email: string; pass
  */
 export const loginWithEmail = async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials),
-    });
+    // Get users from localStorage
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    
+    // Find user with matching credentials
+    const user = users.find((u: StoredUser) => 
+      u.email === credentials.email && u.password === credentials.password
+    );
 
-    const result: AuthResponse = await response.json();
-
-    if (result.success && result.token) {
-      // Store token in memory (not localStorage for security)
-      sessionStorage.setItem('authToken', result.token);
-      sessionStorage.setItem('userData', JSON.stringify(result.user));
-      
-      // Set up automatic token refresh
-      setupTokenRefresh(result.token);
-      
-      return result;
-    } else {
-      throw new Error(result.error || 'Login failed');
+    if (!user) {
+      return {
+        success: false,
+        error: 'Invalid email or password'
+      };
     }
+
+    // Create a simple token (in real app, this would be a JWT)
+    const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Store authentication data
+    sessionStorage.setItem('authToken', token);
+    sessionStorage.setItem('userData', JSON.stringify({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      picture: user.picture,
+      isVerified: user.isVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    }));
+    
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      },
+      token: token
+    };
   } catch (error) {
     console.error('Login error:', error);
     return {

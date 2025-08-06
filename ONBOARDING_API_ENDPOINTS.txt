@@ -1,0 +1,209 @@
+ONBOARDING SYSTEM API ENDPOINTS
+================================
+
+This document lists all the API endpoints used in the onboarding system for Swing Boudoir.
+
+AUTHENTICATION ENDPOINTS
+========================
+
+1. Check User Authentication Status
+   - Endpoint: GET /api/v1/users/{id}
+   - Purpose: Check if user exists and is authenticated
+   - Used in: OnboardingContext.tsx - checkUserProfile()
+   - Headers: Authorization: Bearer {token}
+   - Response: User object or 404 if not found
+
+USER PROFILE ENDPOINTS
+======================
+
+2. Get User Profile
+   - Endpoint: GET /api/v1/users/{id}/profile
+   - Purpose: Check if user already has a profile
+   - Used in: OnboardingContext.tsx - checkUserProfile()
+   - Headers: Authorization: Bearer {token}
+   - Response: Profile object or 404 if no profile exists
+
+3. Create User Profile
+   - Endpoint: POST /api/v1/profile
+   - Purpose: Create new user profile during onboarding completion
+   - Used in: OnboardingContext.tsx - completeOnboarding()
+   - Headers: 
+     * Authorization: Bearer {token}
+     * Content-Type: application/json
+   - Request Body:
+     {
+       "userId": "string",
+       "bio": "string",
+       "avatarUrl": "string",
+       "phone": "string",
+       "address": "string",
+       "city": "string",
+       "country": "string",
+       "postalCode": "string",
+       "dateOfBirth": "string",
+       "gender": "string",
+       "hobbiesAndPassions": "string",
+       "paidVoterMessage": "string",
+       "freeVoterMessage": "string",
+       "lastFreeVoteAt": "string",
+       "coverImageId": "string"
+     }
+   - Response: Created profile object
+
+4. Update User Profile
+   - Endpoint: PUT /api/v1/profile/{id}
+   - Purpose: Update existing user profile
+   - Used in: ProfileSetupStep.tsx - saveProfile()
+   - Headers: 
+     * Authorization: Bearer {token}
+     * Content-Type: application/json
+   - Request Body: Same as create profile
+   - Response: Updated profile object
+
+FILE UPLOAD ENDPOINTS
+=====================
+
+5. Upload Profile Photo
+   - Endpoint: POST /api/v1/upload
+   - Purpose: Upload profile photo during onboarding
+   - Used in: ProfileSetupStep.tsx - handlePhotoUpload()
+   - Headers: Authorization: Bearer {token}
+   - Request Body: FormData with file
+   - Response: { url: "string" }
+
+6. Upload Portfolio Photos
+   - Endpoint: POST /api/v1/upload
+   - Purpose: Upload multiple portfolio photos
+   - Used in: ProfileSetupStep.tsx - handlePortfolioUpload()
+   - Headers: Authorization: Bearer {token}
+   - Request Body: FormData with multiple files
+   - Response: Array of { url: "string" }
+
+COMPETITION ENDPOINTS
+=====================
+
+7. Get Available Competitions
+   - Endpoint: GET /api/v1/contests
+   - Purpose: Fetch competitions for first competition step
+   - Used in: FirstCompetitionStep.tsx - useEffect()
+   - Headers: Authorization: Bearer {token}
+   - Response: Array of competition objects
+
+8. Join Competition
+   - Endpoint: POST /api/v1/contests/join
+   - Purpose: Register user for their first competition
+   - Used in: FirstCompetitionStep.tsx - handleRegister()
+   - Headers: 
+     * Authorization: Bearer {token}
+     * Content-Type: application/json
+   - Request Body:
+     {
+       "contestId": "string",
+       "profileId": "string",
+       "coverImage": "string"
+     }
+   - Response: Success confirmation
+
+NOTIFICATION ENDPOINTS
+======================
+
+9. Create Notification
+   - Endpoint: POST /api/v1/notifications
+   - Purpose: Create notification when user completes onboarding
+   - Used in: OnboardingContext.tsx - completeOnboarding()
+   - Headers: 
+     * Authorization: Bearer {token}
+     * Content-Type: application/json
+   - Request Body:
+     {
+       "userId": "string",
+       "type": "onboarding_complete",
+       "title": "string",
+       "message": "string"
+     }
+   - Response: Created notification object
+
+ONBOARDING FLOW ENDPOINTS
+=========================
+
+10. Save Onboarding Progress
+    - Endpoint: POST /api/v1/onboarding/progress
+    - Purpose: Save onboarding progress to database
+    - Used in: OnboardingContext.tsx - updateOnboardingData()
+    - Headers: 
+      * Authorization: Bearer {token}
+      * Content-Type: application/json
+    - Request Body:
+      {
+        "userId": "string",
+        "currentStep": "number",
+        "onboardingData": "object",
+        "completedSteps": "array"
+      }
+    - Response: Success confirmation
+
+11. Get Onboarding Progress
+    - Endpoint: GET /api/v1/onboarding/progress/{userId}
+    - Purpose: Retrieve saved onboarding progress
+    - Used in: OnboardingContext.tsx - useEffect()
+    - Headers: Authorization: Bearer {token}
+    - Response: Onboarding progress object
+
+12. Complete Onboarding
+    - Endpoint: POST /api/v1/onboarding/complete
+    - Purpose: Mark onboarding as complete
+    - Used in: OnboardingContext.tsx - completeOnboarding()
+    - Headers: 
+      * Authorization: Bearer {token}
+      * Content-Type: application/json
+    - Request Body:
+      {
+        "userId": "string",
+        "onboardingData": "object"
+      }
+    - Response: Success confirmation
+
+ERROR HANDLING
+==============
+
+All endpoints return appropriate HTTP status codes:
+- 200: Success
+- 201: Created
+- 400: Bad Request
+- 401: Unauthorized
+- 403: Forbidden
+- 404: Not Found
+- 500: Internal Server Error
+
+Error Response Format:
+{
+  "message": "string",
+  "statusText": "string",
+  "status": "number"
+}
+
+AUTHENTICATION
+==============
+
+All protected endpoints require:
+- Authorization header with Bearer token
+- Valid JWT token from login/register
+- Token stored in localStorage
+
+USAGE IN ONBOARDING FLOW
+========================
+
+Phase 1: Welcome & Account Setup
+- checkUserProfile() - Check if user has existing profile
+- updateOnboardingData() - Save progress locally
+
+Phase 2: Platform Education
+- No API calls, just UI education
+
+Phase 3: First Steps
+- handlePhotoUpload() - Upload profile photo
+- handlePortfolioUpload() - Upload portfolio photos
+- handleRegister() - Register for first competition
+- completeOnboarding() - Create user profile and complete onboarding
+
+The onboarding system ensures a smooth, step-by-step process for new users to set up their profiles and understand the platform before accessing the full dashboard functionality. 

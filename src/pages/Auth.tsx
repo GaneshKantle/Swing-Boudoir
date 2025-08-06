@@ -24,7 +24,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Shield, Users, Trophy, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 
 const Auth: React.FC = () => {
-  const { loginWithEmail, register, isLoading, isAuthenticated } = useAuth();
+  // Use the correct handlers from AuthContext
+  const { handleLoginWithEmail, handleRegister, isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
@@ -54,7 +55,6 @@ const Auth: React.FC = () => {
   // Handle email login
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!loginData.email || !loginData.password) {
       toast({
         title: "Validation Error",
@@ -63,18 +63,16 @@ const Auth: React.FC = () => {
       });
       return;
     }
-
     try {
-      await loginWithEmail(loginData);
+      await handleLoginWithEmail(loginData.email, loginData.password);
     } catch (error) {
       console.error('Email login error:', error);
     }
   };
 
-  // Handle registration
-  const handleRegister = async (e: React.FormEvent) => {
+  // Handle registration with real API endpoint
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!registerData.name || !registerData.email || !registerData.password || !registerData.confirmPassword) {
       toast({
         title: "Validation Error",
@@ -83,7 +81,6 @@ const Auth: React.FC = () => {
       });
       return;
     }
-
     if (registerData.password !== registerData.confirmPassword) {
       toast({
         title: "Validation Error",
@@ -92,13 +89,15 @@ const Auth: React.FC = () => {
       });
       return;
     }
-
+    // Generate a username from the name (or you can add a username field to the form)
+    const username = registerData.name.replace(/\s+/g, '').toLowerCase();
     try {
-      await register({
-        name: registerData.name,
-        email: registerData.email,
-        password: registerData.password
-      });
+      await handleRegister(
+        registerData.email,
+        registerData.password,
+        registerData.name,
+        username
+      );
     } catch (error) {
       console.error('Registration error:', error);
     }
@@ -126,7 +125,6 @@ const Auth: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary/80 flex items-center justify-center p-4">
       <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-        
         {/* Left Side - Features */}
         <div className="hidden lg:block text-white space-y-8">
           <div className="space-y-4">
@@ -140,7 +138,6 @@ const Auth: React.FC = () => {
               Join the most prestigious modeling platform and compete for life-changing opportunities.
             </p>
           </div>
-
           <div className="space-y-6">
             {features.map((feature, index) => (
               <div key={index} className="flex items-start space-x-4">
@@ -158,7 +155,6 @@ const Auth: React.FC = () => {
               </div>
             ))}
           </div>
-
           <div className="pt-8">
             <div className="flex items-center space-x-4 text-white/70">
               <div className="flex -space-x-2">
@@ -173,7 +169,6 @@ const Auth: React.FC = () => {
             </div>
           </div>
         </div>
-
         {/* Right Side - Authentication Card */}
         <div className="flex justify-center">
           <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
@@ -190,7 +185,6 @@ const Auth: React.FC = () => {
                 </CardDescription>
               </div>
             </CardHeader>
-
             <CardContent className="space-y-6">
               {/* Tabs for Login/Register */}
               <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'register')}>
@@ -198,7 +192,6 @@ const Auth: React.FC = () => {
                   <TabsTrigger value="login">Login</TabsTrigger>
                   <TabsTrigger value="register">Register</TabsTrigger>
                 </TabsList>
-
                 {/* Login Tab */}
                 <TabsContent value="login" className="space-y-4">
                   <form onSubmit={handleEmailLogin} className="space-y-4">
@@ -217,7 +210,6 @@ const Auth: React.FC = () => {
                         />
                       </div>
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="login-password">Password</Label>
                       <div className="relative">
@@ -246,13 +238,12 @@ const Auth: React.FC = () => {
                         </Button>
                       </div>
                     </div>
-
-              <Button
+                    <Button
                       type="submit"
-                disabled={isLoading}
+                      disabled={isLoading}
                       className="w-full"
-              >
-                {isLoading ? (
+                    >
+                      {isLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Signing in...
@@ -263,10 +254,9 @@ const Auth: React.FC = () => {
                     </Button>
                   </form>
                 </TabsContent>
-
                 {/* Register Tab */}
                 <TabsContent value="register" className="space-y-4">
-                  <form onSubmit={handleRegister} className="space-y-4">
+                  <form onSubmit={handleRegisterSubmit} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="register-name">Full Name</Label>
                       <div className="relative">
@@ -282,7 +272,6 @@ const Auth: React.FC = () => {
                         />
                       </div>
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="register-email">Email</Label>
                       <div className="relative">
@@ -298,7 +287,6 @@ const Auth: React.FC = () => {
                         />
                       </div>
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="register-password">Password</Label>
                       <div className="relative">
@@ -324,13 +312,12 @@ const Auth: React.FC = () => {
                           ) : (
                             <Eye className="h-4 w-4" />
                           )}
-              </Button>
+                        </Button>
                       </div>
                     </div>
-
                     <div className="space-y-2">
                       <Label htmlFor="register-confirm-password">Confirm Password</Label>
-              <div className="relative">
+                      <div className="relative">
                         <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                         <Input
                           id="register-confirm-password"
@@ -354,9 +341,8 @@ const Auth: React.FC = () => {
                             <Eye className="h-4 w-4" />
                           )}
                         </Button>
-                </div>
-              </div>
-
+                      </div>
+                    </div>
                     <Button
                       type="submit"
                       disabled={isLoading}
@@ -374,7 +360,6 @@ const Auth: React.FC = () => {
                   </form>
                 </TabsContent>
               </Tabs>
-
               {/* Security Notice */}
               <div className="text-center space-y-3">
                 <div className="flex items-center justify-center space-x-2 text-sm text-gray-600">
@@ -389,7 +374,6 @@ const Auth: React.FC = () => {
           </Card>
         </div>
       </div>
-
       {/* Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-accent/10 rounded-full blur-3xl"></div>

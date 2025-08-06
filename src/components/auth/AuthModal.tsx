@@ -12,315 +12,314 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { loginWithEmail, register, isLoading } = useAuth();
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const { handleLoginWithEmail, handleRegister } = useAuth();
   const { toast } = useToast();
+  
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Login form state
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  
+  // Register form state
+  const [registerName, setRegisterName] = useState('');
+  const [registerUsername, setRegisterUsername] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Form states
-  const [loginData, setLoginData] = useState({
-    email: '',
-    password: ''
-  });
-
-  const [registerData, setRegisterData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
-
-  // Handle email login
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!loginData.email || !loginData.password) {
+    if (!loginEmail || !loginPassword) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
       });
       return;
     }
 
+    setIsLoading(true);
     try {
-      await loginWithEmail(loginData);
+      await handleLoginWithEmail(loginEmail, loginPassword);
+      toast({
+        title: "Login Successful!",
+        description: "Welcome back!"
+      });
+      onSuccess?.();
       onClose();
     } catch (error) {
-      console.error('Email login error:', error);
+      toast({
+        title: "Login Failed",
+        description: error instanceof Error ? error.message : "Please check your credentials and try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Handle registration
-  const handleRegister = async (e: React.FormEvent) => {
+  // Renamed to avoid duplicate definition
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!registerData.name || !registerData.email || !registerData.password || !registerData.confirmPassword) {
+    if (!registerName || !registerUsername || !registerEmail || !registerPassword || !confirmPassword) {
       toast({
-        title: "Validation Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
       });
       return;
     }
 
-    if (registerData.password !== registerData.confirmPassword) {
+    if (registerPassword !== confirmPassword) {
       toast({
-        title: "Validation Error",
-        description: "Passwords do not match",
-        variant: "destructive",
+        title: "Passwords Don't Match",
+        description: "Please make sure your passwords match.",
+        variant: "destructive"
       });
       return;
     }
 
-    if (registerData.password.length < 8) {
+    if (registerPassword.length < 6) {
       toast({
-        title: "Validation Error",
-        description: "Password must be at least 8 characters long",
-        variant: "destructive",
+        title: "Password Too Short",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive"
       });
       return;
     }
 
+    setIsLoading(true);
     try {
-      await register(registerData);
+      await handleRegister(registerEmail, registerPassword, registerName, registerUsername);
+      toast({
+        title: "Registration Successful!",
+        description: "Welcome to Swing Boudoir!"
+      });
+      onSuccess?.();
       onClose();
     } catch (error) {
-      console.error('Registration error:', error);
+      toast({
+        title: "Registration Failed",
+        description: error instanceof Error ? error.message : "Please try again with different information.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (!isOpen) return null;
+  const resetForms = () => {
+    setLoginEmail('');
+    setLoginPassword('');
+    setRegisterName('');
+    setRegisterUsername('');
+    setRegisterEmail('');
+    setRegisterPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
+
+  const handleClose = () => {
+    resetForms();
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="w-full max-w-md">
-        <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
-          <CardHeader className="text-center space-y-4">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-r from-primary to-primary/80 rounded-full flex items-center justify-center">
-              <User className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-2xl font-bold text-gray-900">
-                Welcome to Swing Boudoir
-              </CardTitle>
-              <CardDescription className="text-gray-600 mt-2">
-                Sign in to access your account
-              </CardDescription>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-6">
-            {/* Tabs for Login/Register */}
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'register')}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
-              </TabsList>
-
-              {/* Login Tab */}
-              <TabsContent value="login" className="space-y-4">
-                <form onSubmit={handleEmailLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="login-email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={loginData.email}
-                        onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="login-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Enter your password"
-                        value={loginData.password}
-                        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                        className="pl-10 pr-10"
-                        required
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-center text-2xl font-bold">
+            Welcome to Swing Boudoir
+          </DialogTitle>
+        </DialogHeader>
+        
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'register')}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="register">Register</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="login" className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="login-email">Email</Label>
+                <Input
+                  id="login-email"
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="login-password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    required
+                  />
                   <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full"
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
                   >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
-                      </>
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      "Sign In"
+                      <Eye className="h-4 w-4" />
                     )}
                   </Button>
-                </form>
-              </TabsContent>
-
-              {/* Register Tab */}
-              <TabsContent value="register" className="space-y-4">
-                <form onSubmit={handleRegister} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="register-name">Full Name</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="register-name"
-                        type="text"
-                        placeholder="Enter your full name"
-                        value={registerData.name}
-                        onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="register-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="register-email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={registerData.email}
-                        onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="register-password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="register-password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Create a password"
-                        value={registerData.password}
-                        onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                        className="pl-10 pr-10"
-                        required
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="register-confirm-password">Confirm Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="register-confirm-password"
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Confirm your password"
-                        value={registerData.confirmPassword}
-                        onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                        className="pl-10 pr-10"
-                        required
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
+                </div>
+              </div>
+              
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  'Login'
+                )}
+              </Button>
+            </form>
+          </TabsContent>
+          
+          <TabsContent value="register" className="space-y-4">
+            <form onSubmit={handleRegisterSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="register-name">Full Name</Label>
+                <Input
+                  id="register-name"
+                  type="text"
+                  value={registerName}
+                  onChange={(e) => setRegisterName(e.target.value)}
+                  placeholder="Enter your full name"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="register-username">Username</Label>
+                <Input
+                  id="register-username"
+                  type="text"
+                  value={registerUsername}
+                  onChange={(e) => setRegisterUsername(e.target.value)}
+                  placeholder="Choose a username"
+                  minLength={3}
+                  maxLength={100}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="register-email">Email</Label>
+                <Input
+                  id="register-email"
+                  type="email"
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="register-password">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="register-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    placeholder="Create a password"
+                    minLength={6}
+                    required
+                  />
                   <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full"
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
                   >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating account...
-                      </>
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
                     ) : (
-                      "Create Account"
+                      <Eye className="h-4 w-4" />
                     )}
                   </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-
-            {/* Close Button */}
-            <Button
-              variant="outline"
-              onClick={onClose}
-              className="w-full"
-            >
-              Cancel
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm Password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirm-password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm your password"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  'Create Account'
+                )}
+              </Button>
+            </form>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 };
-
-export default AuthModal;
