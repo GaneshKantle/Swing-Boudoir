@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "version": "1.0.0",
-    "title": "Will Magazine API"
+    "title": "Swing Magazine API"
   },
   "security": [
     {
@@ -2462,6 +2462,166 @@
                   },
                   "required": [
                     "message"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Profile not found"
+                    },
+                    "statusText": {
+                      "type": "string",
+                      "example": "Not Found"
+                    },
+                    "status": {
+                      "type": "number",
+                      "example": 404
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "statusText",
+                    "status"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profile/user/{userId}": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Get Profile by User ID",
+        "description": "Get a specific profile by user ID",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The user ID"
+            },
+            "required": true,
+            "description": "The user ID",
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "userId": {
+                      "type": "string"
+                    },
+                    "bio": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 255
+                    },
+                    "phone": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 20,
+                      "example": "+1 210 456 2719"
+                    },
+                    "address": {
+                      "type": "string"
+                    },
+                    "city": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 100,
+                      "example": "Manhattan"
+                    },
+                    "country": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 100,
+                      "example": "United States"
+                    },
+                    "postalCode": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 20
+                    },
+                    "dateOfBirth": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "gender": {
+                      "type": "string",
+                      "nullable": true,
+                      "maxLength": 50
+                    },
+                    "hobbiesAndPassions": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "paidVoterMessage": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "freeVoterMessage": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "lastFreeVoteAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "coverImageId": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "userId",
+                    "bio",
+                    "avatarUrl",
+                    "phone",
+                    "address",
+                    "city",
+                    "country",
+                    "postalCode",
+                    "dateOfBirth",
+                    "gender",
+                    "hobbiesAndPassions",
+                    "paidVoterMessage",
+                    "freeVoterMessage",
+                    "createdAt",
+                    "updatedAt",
+                    "lastFreeVoteAt",
+                    "coverImageId"
                   ]
                 }
               }
@@ -7093,6 +7253,9 @@
                           "id": {
                             "type": "string"
                           },
+                          "contestId": {
+                            "type": "string"
+                          },
                           "coverImage": {
                             "type": "string",
                             "nullable": true
@@ -7134,6 +7297,35 @@
                               "paidVoterMessage": {
                                 "type": "string",
                                 "nullable": true
+                              },
+                              "user": {
+                                "type": "object",
+                                "nullable": true,
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "email": {
+                                    "type": "string",
+                                    "format": "email",
+                                    "example": "alex@example.com"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "example": "Alex"
+                                  },
+                                  "image": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "example": "https://example.com/avatar.png"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "email",
+                                  "name",
+                                  "image"
+                                ]
                               }
                             },
                             "required": [
@@ -7141,12 +7333,14 @@
                               "bio",
                               "freeVoterMessage",
                               "hobbiesAndPassions",
-                              "paidVoterMessage"
+                              "paidVoterMessage",
+                              "user"
                             ]
                           }
                         },
                         "required": [
                           "id",
+                          "contestId",
                           "coverImage",
                           "isApproved",
                           "isParticipating",
@@ -7850,10 +8044,10 @@
         }
       }
     },
-    "/api/v1/contest/vote": {
+    "/api/v1/contest/vote/free": {
       "post": {
-        "summary": "Vote a profile in a contest",
-        "description": "Vote for a profile in a contest. Supports free and paid votes. Free votes are limited to one per 24 hours per contest.",
+        "summary": "Give a free vote",
+        "description": "Give a free vote in a contest for a profile. Free votes are limited to one per 24 hours per contest.",
         "tags": [
           "Vote"
         ],
@@ -7866,24 +8060,13 @@
                 "type": "object",
                 "properties": {
                   "voterId": {
-                    "type": "string",
-                    "format": "cuid"
+                    "type": "string"
                   },
                   "voteeId": {
-                    "type": "string",
-                    "format": "cuid"
+                    "type": "string"
                   },
                   "contestId": {
-                    "type": "string",
-                    "format": "cuid"
-                  },
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "FREE",
-                      "PAID"
-                    ],
-                    "default": "FREE"
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -7903,15 +8086,7 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "voterId": {
-                      "type": "string",
-                      "format": "cuid"
-                    },
-                    "voteeId": {
-                      "type": "string",
-                      "format": "cuid"
-                    },
-                    "contestId": {
+                    "id": {
                       "type": "string",
                       "format": "cuid"
                     },
@@ -7920,23 +8095,41 @@
                       "enum": [
                         "FREE",
                         "PAID"
-                      ],
-                      "default": "FREE"
+                      ]
                     },
-                    "id": {
+                    "voterId": {
+                      "type": "string"
+                    },
+                    "voteeId": {
+                      "type": "string"
+                    },
+                    "contestId": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "number"
+                    },
+                    "paymentId": {
                       "type": "string",
-                      "format": "cuid"
+                      "nullable": true
                     },
                     "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
                       "type": "string"
                     }
                   },
                   "required": [
+                    "id",
+                    "type",
                     "voterId",
                     "voteeId",
                     "contestId",
-                    "id",
-                    "createdAt"
+                    "count",
+                    "paymentId",
+                    "createdAt",
+                    "updatedAt"
                   ]
                 }
               }
@@ -7998,6 +8191,15 @@
                       "example": {
                         "issues": [
                           {
+                            "expected": "'FREE' | 'PAID'",
+                            "received": "undefined",
+                            "code": "invalid_type",
+                            "path": [
+                              "type"
+                            ],
+                            "message": "Required"
+                          },
+                          {
                             "code": "invalid_type",
                             "expected": "string",
                             "received": "undefined",
@@ -8032,6 +8234,153 @@
                   "required": [
                     "success",
                     "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Too many request"
+                    },
+                    "statusText": {
+                      "type": "string",
+                      "example": "Too Many Requests"
+                    },
+                    "status": {
+                      "type": "number",
+                      "example": 429
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "statusText",
+                    "status"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contest/vote/pay": {
+      "post": {
+        "tags": [
+          "Vote"
+        ],
+        "summary": "Give a paid vote",
+        "description": "",
+        "requestBody": {
+          "description": "The validation error",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "voteeId": {
+                    "type": "string"
+                  },
+                  "voterId": {
+                    "type": "string"
+                  },
+                  "contestId": {
+                    "type": "string"
+                  },
+                  "voteCount": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "voteeId",
+                  "voterId",
+                  "contestId",
+                  "voteCount"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment made successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Resource not found"
+                    },
+                    "statusText": {
+                      "type": "string",
+                      "example": "Not Found"
+                    },
+                    "status": {
+                      "type": "number",
+                      "example": 404
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "statusText",
+                    "status"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Service Unavailable"
+                    },
+                    "statusText": {
+                      "type": "string",
+                      "example": "Service Unavailable"
+                    },
+                    "status": {
+                      "type": "number",
+                      "example": 503
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "statusText",
+                    "status"
                   ]
                 }
               }
@@ -9073,125 +9422,6 @@
         }
       }
     },
-    "/api/v1/payments/vote/pay": {
-      "post": {
-        "tags": [
-          "Payments",
-          "Vote"
-        ],
-        "summary": "Paid Votes for Contest",
-        "description": "",
-        "requestBody": {
-          "description": "The validation error",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "voteeId": {
-                    "type": "string"
-                  },
-                  "voterId": {
-                    "type": "string"
-                  },
-                  "contestId": {
-                    "type": "string"
-                  },
-                  "voteCount": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "voteeId",
-                  "voterId",
-                  "contestId",
-                  "voteCount"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Payment made successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "url": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "url"
-                  ]
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Resource not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "Resource not found"
-                    },
-                    "statusText": {
-                      "type": "string",
-                      "example": "Not Found"
-                    },
-                    "status": {
-                      "type": "number",
-                      "example": 404
-                    }
-                  },
-                  "required": [
-                    "message",
-                    "statusText",
-                    "status"
-                  ]
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "example": "Service Unavailable"
-                    },
-                    "statusText": {
-                      "type": "string",
-                      "example": "Service Unavailable"
-                    },
-                    "status": {
-                      "type": "number",
-                      "example": 503
-                    }
-                  },
-                  "required": [
-                    "message",
-                    "statusText",
-                    "status"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/payments/{userId}/history": {
       "get": {
         "tags": [
@@ -10105,6 +10335,624 @@
                     }
                   },
                   "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/search/profiles": {
+      "get": {
+        "tags": [
+          "Search"
+        ],
+        "summary": "Search profiles",
+        "description": "Search and filter profiles with pagination support",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "nullable": true,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "nullable": true,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Search query string"
+            },
+            "required": false,
+            "description": "Search query string",
+            "name": "query",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "username",
+                "createdAt"
+              ],
+              "default": "createdAt"
+            },
+            "required": false,
+            "name": "sortBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            },
+            "required": false,
+            "name": "sortOrder",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by city"
+            },
+            "required": false,
+            "description": "Filter by city",
+            "name": "city",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by country"
+            },
+            "required": false,
+            "description": "Filter by country",
+            "name": "country",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by gender"
+            },
+            "required": false,
+            "description": "Filter by gender",
+            "name": "gender",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "nullable": true,
+              "description": "Filter profiles with/without avatar",
+              "example": false
+            },
+            "required": false,
+            "description": "Filter profiles with/without avatar",
+            "name": "hasAvatar",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profiles found successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "userId": {
+                            "type": "string"
+                          },
+                          "bio": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "avatarUrl": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "city": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "country": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "gender": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          },
+                          "user": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "username": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "displayUsername": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "email": {
+                                "type": "string"
+                              },
+                              "image": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "username",
+                              "displayUsername",
+                              "name",
+                              "email",
+                              "image"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "userId",
+                          "bio",
+                          "avatarUrl",
+                          "city",
+                          "country",
+                          "gender",
+                          "createdAt",
+                          "updatedAt",
+                          "user"
+                        ]
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "number",
+                          "example": 100
+                        },
+                        "totalPages": {
+                          "type": "number",
+                          "example": 5
+                        },
+                        "hasNextPage": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "hasPreviousPage": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "nextPage": {
+                          "type": "number",
+                          "nullable": true,
+                          "example": 2
+                        },
+                        "previousPage": {
+                          "type": "number",
+                          "nullable": true,
+                          "example": null
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "totalPages",
+                        "hasNextPage",
+                        "hasPreviousPage",
+                        "nextPage",
+                        "previousPage"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "pagination"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid search parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "issues": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "code": {
+                                "type": "string"
+                              },
+                              "path": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "code",
+                              "path"
+                            ]
+                          }
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "issues",
+                        "name"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/search/contests": {
+      "get": {
+        "tags": [
+          "Search"
+        ],
+        "summary": "Search contests",
+        "description": "Search and filter contests with pagination support",
+        "parameters": [
+          {
+            "schema": {
+              "type": "number",
+              "nullable": true,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "nullable": true,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Search query string"
+            },
+            "required": false,
+            "description": "Search query string",
+            "name": "query",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "createdAt"
+              ],
+              "default": "createdAt"
+            },
+            "required": false,
+            "name": "sortBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            },
+            "required": false,
+            "name": "sortOrder",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "upcoming",
+                "ended"
+              ],
+              "description": "Filter by contest status"
+            },
+            "required": false,
+            "description": "Filter by contest status",
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "nullable": true,
+              "description": "Minimum prize pool amount"
+            },
+            "required": false,
+            "description": "Minimum prize pool amount",
+            "name": "minPrizePool",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "nullable": true,
+              "description": "Maximum prize pool amount"
+            },
+            "required": false,
+            "description": "Maximum prize pool amount",
+            "name": "maxPrizePool",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "nullable": true,
+              "description": "Filter contests starting from this date"
+            },
+            "required": false,
+            "description": "Filter contests starting from this date",
+            "name": "startDate",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "nullable": true,
+              "description": "Filter contests ending before this date"
+            },
+            "required": false,
+            "description": "Filter contests ending before this date",
+            "name": "endDate",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contests found successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "startDate": {
+                            "type": "string"
+                          },
+                          "endDate": {
+                            "type": "string"
+                          },
+                          "prizePool": {
+                            "type": "number"
+                          },
+                          "winnerProfileId": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "upcoming",
+                              "ended"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "description",
+                          "startDate",
+                          "endDate",
+                          "prizePool",
+                          "winnerProfileId",
+                          "createdAt",
+                          "updatedAt",
+                          "status"
+                        ]
+                      }
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "number",
+                          "example": 100
+                        },
+                        "totalPages": {
+                          "type": "number",
+                          "example": 5
+                        },
+                        "hasNextPage": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "hasPreviousPage": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "nextPage": {
+                          "type": "number",
+                          "nullable": true,
+                          "example": 2
+                        },
+                        "previousPage": {
+                          "type": "number",
+                          "nullable": true,
+                          "example": null
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "totalPages",
+                        "hasNextPage",
+                        "hasPreviousPage",
+                        "nextPage",
+                        "previousPage"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "pagination"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid search parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "issues": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "code": {
+                                "type": "string"
+                              },
+                              "path": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    }
+                                  ]
+                                }
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "code",
+                              "path"
+                            ]
+                          }
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "issues",
+                        "name"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
                     "error"
                   ]
                 }

@@ -1,235 +1,235 @@
-import { Bell, Trophy, Users, Heart } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { 
+  Bell, 
+  CheckCircle, 
+  AlertCircle, 
+  Info, 
+  Trash2
+} from "lucide-react";
 
 interface Notification {
-  id: number;
-  type: string;
-  title: string;
+  id: string;
   message: string;
-  time: string;
-  unread: boolean;
-  icon: string;
+  userId: string;
+  profileId?: string;
+  createdAt: string;
+  updatedAt: string;
+  isRead: boolean;
+  archived: boolean;
+  icon?: 'WARNING' | 'SUCESS' | 'INFO';
+  action?: string;
 }
 
 export function DashboardNotifications() {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [forceUpdate, setForceUpdate] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load notifications from localStorage
   useEffect(() => {
-    const loadNotifications = () => {
-      try {
-        const storedNotifications = localStorage.getItem('notifications');
-        if (storedNotifications) {
-          setNotifications(JSON.parse(storedNotifications));
-        } else {
-          // Initialize with default notifications if none exist
-          const defaultNotifications = [
-            {
-              id: 1,
-              type: "competition",
-              title: "New Competition: Hot Girl Summer - Barbados",
-              message: "Participate in this contest/competition. Registration ends in 3 days!",
-              time: "2 hours ago",
-              unread: true,
-              icon: "Trophy"
-            },
-            {
-              id: 2,
-              type: "vote",
-              title: "You received 5 new votes!",
-              message: "Anonymous voted for you in Big Game Competition",
-              time: "4 hours ago",
-              unread: true,
-              icon: "Heart"
-            },
-            {
-              id: 3,
-              type: "winner",
-              title: "Congratulations! You won!",
-              message: "You've won the Workout Warrior contest — here's what's next: Check your prize history for details.",
-              time: "1 day ago",
-              unread: false,
-              icon: "Trophy"
-            },
-            {
-              id: 4,
-              type: "tip",
-              title: "Competition Tips & Tricks",
-              message: "Watch our latest video guide on how to maximize your votes and engagement.",
-              time: "2 days ago",
-              unread: false,
-              icon: "Users"
-            }
-          ];
-          setNotifications(defaultNotifications);
-          localStorage.setItem('notifications', JSON.stringify(defaultNotifications));
+    if (user?.id) {
+      loadNotifications();
+    }
+  }, [user?.id]);
+
+  const loadNotifications = async () => {
+    try {
+      setError(null);
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://api.swingboudoirmag.com/api/v1/notifications?userId=${user?.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      } catch (error) {
-        console.error('Error loading notifications:', error);
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data.notifications || []);
+      } else {
+        setError('Failed to load notifications');
       }
-    };
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+      setError('Failed to load notifications');
+    }
+  };
 
-    loadNotifications();
-
-    // Listen for storage changes (when new notifications are created)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'notifications') {
-        if (e.newValue) {
-          setNotifications(JSON.parse(e.newValue));
-          // Force re-render
-          setForceUpdate(prev => prev + 1);
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`https://api.swingboudoirmag.com/api/v1/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
+      });
+
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(notification => 
+            notification.id === notificationId 
+              ? { ...notification, isRead: true }
+              : notification
+          )
+        );
       }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  const markAsRead = async (notificationId: number) => {
-    const updatedNotifications = notifications.map(notification => 
-      notification.id === notificationId 
-        ? { ...notification, unread: false }
-        : notification
-    );
-    
-    localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
-    setNotifications(updatedNotifications);
-    
-    // Dispatch storage event to notify other components
-    window.dispatchEvent(new StorageEvent('storage', {
-      key: 'notifications',
-      newValue: JSON.stringify(updatedNotifications)
-    }));
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
   const markAllAsRead = async () => {
-    const updatedNotifications = notifications.map(notification => ({
-      ...notification,
-      unread: false
-    }));
-    
-    localStorage.setItem('notifications', JSON.stringify(updatedNotifications));
-    setNotifications(updatedNotifications);
-    
-    // Dispatch storage event to notify other components
-    window.dispatchEvent(new StorageEvent('storage', {
-      key: 'notifications',
-      newValue: JSON.stringify(updatedNotifications)
-    }));
-  };
-
-  const getIconComponent = (iconName: string) => {
-    switch (iconName) {
-      case 'Trophy':
-        return Trophy;
-      case 'Heart':
-        return Heart;
-      case 'Users':
-        return Users;
-      default:
-        return Bell;
-    }
-  };
-
-  const formatTime = (timeString: string) => {
     try {
-      const time = new Date(timeString);
-      const now = new Date();
-      const diffInHours = (now.getTime() - time.getTime()) / (1000 * 60 * 60);
-      
-      if (diffInHours < 1) {
-        return 'Just now';
-      } else if (diffInHours < 24) {
-        return `${Math.floor(diffInHours)} hours ago`;
-      } else {
-        return time.toLocaleDateString();
+      const token = localStorage.getItem('token');
+      const response = await fetch('https://api.swingboudoirmag.com/api/v1/notifications/mark-all-read', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(notification => ({ ...notification, isRead: true }))
+        );
       }
-    } catch {
-      return timeString;
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
     }
   };
+
+  const getIcon = (icon?: string) => {
+    switch (icon) {
+      case 'WARNING':
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      case 'SUCESS':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'INFO':
+        return <Info className="h-4 w-4 text-blue-500" />;
+      default:
+        return <Bell className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return `${Math.floor(diffInMinutes / 1440)}d ago`;
+  };
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  // Show no data message
+  if (notifications.length === 0 && !error) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
+        </div>
+        
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-semibold mb-2">No notifications yet</h3>
+            <p className="text-muted-foreground">
+              You'll see notifications here when you receive votes, join competitions, or get important updates.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
+        </div>
+        
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+            <h3 className="text-lg font-semibold mb-2">Error loading notifications</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={loadNotifications} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
-        <Button variant="outline" onClick={markAllAsRead} size="sm">
-          Mark All as Read
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Badge variant="secondary">{unreadCount} unread</Badge>
+          {unreadCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={markAllAsRead}
+              className="text-xs"
+            >
+              Mark all as read
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-4">
-        {notifications.map((notification) => {
-          const Icon = getIconComponent(notification.icon);
-          return (
-            <Card 
-              key={notification.id} 
-              className={`cursor-pointer transition-colors ${
-                notification.unread ? 'bg-primary/5 border-primary/20' : ''
-              }`}
-              onClick={() => markAsRead(notification.id)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-primary/10 rounded-full">
-                      <Icon className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{notification.title}</CardTitle>
-                      {notification.unread && (
-                        <Badge variant="secondary" className="mt-1">
-                          New
-                        </Badge>
-                      )}
-                    </div>
+        {notifications.map((notification) => (
+          <Card 
+            key={notification.id} 
+            className={`transition-all duration-200 ${
+              !notification.isRead ? 'border-l-4 border-l-primary bg-primary/5' : ''
+            }`}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-3 flex-1">
+                  <div className="mt-1">
+                    {getIcon(notification.icon)}
                   </div>
-                  <span className="text-sm text-muted-foreground">
-                    {formatTime(notification.time)}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm ${!notification.isRead ? 'font-medium' : 'text-muted-foreground'}`}>
+                      {notification.message}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatTime(notification.createdAt)}
+                    </p>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">{notification.message}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
+                {!notification.isRead && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => markAsRead(notification.id)}
+                    className="ml-2"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Bell className="mr-2 h-5 w-5" />
-            FAQs & Quick Tips
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <h4 className="font-semibold">How do I decide which competition I want my votes to count towards?</h4>
-            <p className="text-sm text-muted-foreground">
-              You can select your active competition in your profile settings. All votes will count towards your currently selected competition.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <h4 className="font-semibold">Competition Levels & Guidance</h4>
-            <p className="text-sm text-muted-foreground">
-              Each competition has multiple levels. Complete lower levels to unlock higher tiers with bigger prizes.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <h4 className="font-semibold">New User Guide</h4>
-            <p className="text-sm text-muted-foreground">
-              Welcome! Start by completing your profile, uploading photos, and joining your first competition.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

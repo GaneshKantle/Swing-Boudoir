@@ -12,12 +12,12 @@ export function DashboardCompetitions() {
     isLoading, 
     getActiveCompetitions, 
     getComingSoonCompetitions, 
-    getEndedCompetitions 
+    getCompletedCompetitions 
   } = useCompetitions();
 
   const activeCompetitions = getActiveCompetitions();
   const comingSoonCompetitions = getComingSoonCompetitions();
-  const endedCompetitions = getEndedCompetitions();
+  const endedCompetitions = getCompletedCompetitions();
 
   const shareCompetition = async (competitionName: string) => {
     const url = `${window.location.origin}/public-profile`; // Update with actual profile URL
