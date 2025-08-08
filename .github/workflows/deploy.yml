@@ -1,4 +1,4 @@
-name: Deploy Swing Boudior frontend to VPS
+name: Deploy Swing Boudoir frontend to VPS
 
 on:
   push:
@@ -21,24 +21,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build project
+      - name: Build Vite project
         run: npm run build
 
-      - name: Copy files to VPS
+      - name: Copy built files to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "dist/*"
-          target: "/root/swing-frontend"
+          target: "/var/www/swing-frontend"
 
-      - name: Restart app on VPS
+      - name: Restart Nginx (optional)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /root/swing-frontend
-            pm2 reload all || pm2 start npm --name swing-frontend -- run start
+            sudo systemctl restart nginx
