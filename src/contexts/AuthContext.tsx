@@ -81,6 +81,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Utility to check if user has a profile
+const checkUserProfile = async (userId: string, token: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`https://api.swingboudoirmag.com/api/v1/users/${userId}/profile`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (response.status === 200) return true;
+    if (response.status === 401 || response.status === 404) return false;
+    return false;
+  } catch (err) {
+    return false;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -118,17 +132,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         setSession(null);
         setIsAuthenticated(false);
-      }
-    } catch (error) {
+        }
+      } catch (error) {
       console.error('Error getting session:', error);
       localStorage.removeItem('token');
       setUser(null);
       setSession(null);
       setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
   // Check if user needs onboarding
   const checkUserNeedsOnboarding = async (userId: string): Promise<boolean> => {
@@ -157,14 +171,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Register user
   const handleRegister = async (email: string, password: string, name: string, username: string) => {
-    try {
-      setError(null);
       setIsLoading(true);
+    setError(null);
+    try {
+      const requestBody = {
+        email,
+        password,
+        name,
+        username,
+        image: null,
+        callbackURL: getCallbackUrl('/dashboard')
+      };
       
+      console.log('Register request:', {
+        url: getAuthUrl('/sign-up/email'),
+        body: { ...requestBody, password: '[HIDDEN]' }
+      });
+
       const response = await fetch(getAuthUrl('/sign-up/email'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           email,
@@ -172,32 +200,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name,
           username,
           image: null,
-          callbackURL: '/verify-email'
+          callbackURL: getCallbackUrl('/verify-email')
         })
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Registration failed');
+        const errorText = await response.text();
+        console.error('Register error response:', errorText);
+        
+        let errorMessage = 'Registration failed';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.error || 'Registration failed';
+        } catch {
+          errorMessage = `Registration failed (${response.status}): ${errorText}`;
+        }
+        
+        throw new Error(errorMessage);
       }
-
-      const data = await response.json();
-      setUser(data.user);
-      setSession(data.session);
-      setIsAuthenticated(true);
-      localStorage.setItem('token', data.session.token);
       
-      // Check if user needs onboarding
-      const needsOnboarding = await checkUserNeedsOnboarding(data.user.id);
-      if (needsOnboarding) {
-        navigate('/onboarding');
-      } else {
-        navigate('/dashboard');
+      const data = await response.json();
+      console.log('Register success data:', data);
+      
+      const user = data.user;
+      const token = data.token || data.session?.token;
+      
+      if (!user || !token) {
+        throw new Error('Invalid response from server');
       }
-    } catch (error) {
-      console.error('Registration error:', error);
-      setError(error instanceof Error ? error.message : 'Registration failed');
-      throw error;
+      
+      setUser(user);
+      localStorage.setItem('token', token);
+      
+      // Check if user has profile
+      const hasProfile = await checkUserNeedsOnboarding(user.id);
+      if (hasProfile) {
+        navigate('/dashboard');
+      } else {
+        navigate('/onboarding');
+      }
+    } catch (error: unknown) {
+      console.error('Register error:', error);
+      if (error instanceof Error) {
+        setError(error.message || 'Registration failed');
+      } else {
+        setError('Registration failed');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -205,43 +253,73 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Login with email
   const handleLoginWithEmail = async (email: string, password: string) => {
+    setIsLoading(true);
+    setError(null);
     try {
-      setError(null);
-      setIsLoading(true);
+      const requestBody = {
+        email,
+        password,
+        callbackURL: getCallbackUrl('/dashboard')
+      };
       
-      const response = await fetch(getAuthUrl('/sign-in/email'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email,
-          password
-        })
+      console.log('Login request:', {
+        url: getAuthUrl('/sign-in/email'),
+        body: { ...requestBody, password: '[HIDDEN]' }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
-      }
-
-      const data = await response.json();
-      setUser(data.user);
-      setSession(data.session);
-      setIsAuthenticated(true);
-      localStorage.setItem('token', data.session.token);
+      const response = await fetch(getAuthUrl('/sign-in/email'), {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
       
-      // Check if user needs onboarding
-      const needsOnboarding = await checkUserNeedsOnboarding(data.user.id);
-      if (needsOnboarding) {
-        navigate('/onboarding');
-      } else {
-        navigate('/dashboard');
+      console.log('Login response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Login error response:', errorText);
+        
+        let errorMessage = 'Login failed';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.error || 'Login failed';
+        } catch {
+          errorMessage = `Login failed (${response.status}): ${errorText}`;
+        }
+        
+        throw new Error(errorMessage);
       }
-    } catch (error) {
+      
+      const data = await response.json();
+      console.log('Login success data:', data);
+      
+      const user = data.user;
+      const token = data.token || data.session?.token;
+      
+      if (!user || !token) {
+        throw new Error('Invalid response from server');
+      }
+      
+      setUser(user);
+      localStorage.setItem('token', token);
+      
+      // Check if user has profile
+      const hasProfile = await checkUserNeedsOnboarding(user.id);
+      if (hasProfile) {
+        navigate('/dashboard');
+      } else {
+        navigate('/onboarding');
+      }
+    } catch (error: unknown) {
       console.error('Login error:', error);
-      setError(error instanceof Error ? error.message : 'Login failed');
-      throw error;
+      if (error instanceof Error) {
+        setError(error.message || 'Login failed');
+      } else {
+        setError('Login failed');
+      }
     } finally {
       setIsLoading(false);
     }
