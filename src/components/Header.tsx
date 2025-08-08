@@ -1,163 +1,43 @@
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, Menu, User } from "lucide-react";
-import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Menu } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
-const Header = () => {
-  const { user, isAuthenticated, logout } = useAuth();
-  const navigate = useNavigate();
+interface HeaderProps {
+  onSidebarToggle?: () => void;
+}
+
+const Header = ({ onSidebarToggle }: HeaderProps) => {
   const location = useLocation();
   const isDashboardPage = location.pathname.startsWith('/dashboard');
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  // const navItems = [
-  //   { label: "Competitions", href: "/competitions" },
-  //   { label: "Winners", href: "/winners" },
-  //   { label: "Rules", href: "/rules" },
-  //   { label: "FAQ", href: "/faq" },
-  //   { label: "Contact", href: "/contact" },
-  // ];
-
   return (
-    <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center">
-            <a href="/" className="flex flex-col items-start">
-              <div className="text-2xl font-display font-bold text-primary tracking-tight">
-                SWING
-              </div>
-              <div className="text-xs font-medium text-muted-foreground -mt-1 tracking-wider">
-                Boudoir
-              </div>
-            </a>
-          </div>
-
-          {/* Desktop Navigation */}
-          {/* <nav className="hidden md:flex items-center space-x-8">
-            {navItems.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className="text-sm font-medium text-foreground hover:text-accent transition-smooth relative group"
-              >
-                {item.label}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-accent transition-all duration-300 group-hover:w-full"></span>
-              </a>
-            ))}
-          </nav> */}
-
-          {/* Desktop Auth Buttons */}
-          <div className="hidden md:flex items-center space-x-3">
-            {!isAuthenticated || !isDashboardPage ? (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/login')}
-                  className="text-foreground hover:text-accent"
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Login
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => navigate('/register')}
-                  className="bg-gradient-competition text-competition-foreground hover:opacity-90 transition-smooth"
-                >
-                  Register
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="text-foreground hover:text-accent"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
-            )}
-          </div>
-
-          {/* Mobile Menu */}
-          <Sheet>
-            <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="sm">
-                <Menu className="w-5 h-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-80">
-              <div className="flex flex-col h-full">
-                <div className="flex items-center justify-between py-4 border-b border-border">
-                  <div className="flex flex-col">
-                    <div className="text-xl font-display font-bold text-primary">
-                      SWING
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Boudoir
-                    </div>
-                  </div>
-                </div>
-
-                {/* <nav className="flex-1 py-6">
-                  <ul className="space-y-4">
-                    {navItems.map((item) => (
-                      <li key={item.label}>
-                        <a
-                          href={item.href}
-                          className="block text-lg font-medium text-foreground hover:text-accent transition-smooth py-2"
-                        >
-                          {item.label}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </nav> */}
-
-                <div className="border-t border-border pt-6 space-y-3">
-                  {!isAuthenticated || !isDashboardPage ? (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={() => navigate('/login')}
-                        className="w-full"
-                      >
-                        <User className="w-4 h-4 mr-2" />
-                        Login
-                      </Button>
-                      <Button
-                        onClick={() => navigate('/register')}
-                        className="w-full bg-gradient-competition text-competition-foreground"
-                      >
-                        Register
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      onClick={handleLogout}
-                      className="w-full"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Logout
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        {/* Logo */}
+        <div className="flex items-center">
+          <a href="/" className="flex flex-col items-start">
+            <div className="text-2xl font-display font-bold text-primary tracking-tight">
+              SWING
+            </div>
+            <div className="text-xs font-medium text-muted-foreground -mt-1 tracking-wider">
+              Boudoir
+            </div>
+          </a>
         </div>
-      </header>
-    </>
+
+        {/* Mobile Sidebar Toggle - Only show on dashboard pages */}
+        {isDashboardPage && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onSidebarToggle}
+            className="md:hidden"
+          >
+            <Menu className="w-5 h-5" />
+          </Button>
+        )}
+      </div>
+    </header>
   );
 };
 

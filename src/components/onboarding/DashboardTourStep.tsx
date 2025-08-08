@@ -1,10 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { Button } from '@/components/ui/button';
 import { Trophy, Camera, Heart, DollarSign } from 'lucide-react';
 
 export const DashboardTourStep: React.FC = () => {
-  const { completeStep, completeOnboarding } = useOnboarding();
+  const navigate = useNavigate();
+  const { completeOnboarding } = useOnboarding();
 
   const features = [
     {
@@ -32,7 +34,8 @@ export const DashboardTourStep: React.FC = () => {
   const handleCompleteOnboarding = async () => {
     try {
       await completeOnboarding();
-      completeStep('dashboard-tour');
+      // Navigate to dashboard after successful completion
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error completing onboarding:', error);
     }
