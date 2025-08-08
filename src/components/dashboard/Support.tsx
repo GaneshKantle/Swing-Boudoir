@@ -41,7 +41,7 @@ export function Support() {
                 <Mail className="h-5 w-5 text-primary" />
                 <div>
                   <p className="font-medium">Email Support</p>
-                  <p className="text-sm text-muted-foreground">support@maxim.com</p>
+                  <p className="text-sm text-muted-foreground">support@swingboudior.com</p>
                 </div>
               </div>
 
@@ -49,7 +49,7 @@ export function Support() {
                 <Phone className="h-5 w-5 text-primary" />
                 <div>
                   <p className="font-medium">Phone Support</p>
-                  <p className="text-sm text-muted-foreground">1-800-MAXIM-1</p>
+                  <p className="text-sm text-muted-foreground">1-800-SB-1</p>
                 </div>
               </div>
 
@@ -57,7 +57,7 @@ export function Support() {
                 <Clock className="h-5 w-5 text-primary" />
                 <div>
                   <p className="font-medium">Support Hours</p>
-                  <p className="text-sm text-muted-foreground">Mon-Fri: 9AM-6PM EST</p>
+                  <p className="text-sm text-muted-foreground">Mon-Fri: 9AM-6PM IST</p>
                 </div>
               </div>
             </div>

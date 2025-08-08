@@ -84,7 +84,12 @@
             "type": "string"
           },
           "role": {
-            "type": "string"
+            "type": [
+              "USER",
+              "ADMIN",
+              "MODERATOR"
+            ],
+            "readOnly": true
           }
         },
         "required": [

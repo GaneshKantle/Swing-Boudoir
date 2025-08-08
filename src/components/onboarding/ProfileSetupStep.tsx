@@ -1,393 +1,413 @@
 import React, { useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Camera, Upload, X, Heart, MessageCircle } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+  User, 
+  Camera, 
+  Upload, 
+  X, 
+  Image as ImageIcon,
+  Heart,
+  MessageCircle,
+  Star
+} from 'lucide-react';
 
-export const ProfileSetupStep: React.FC = () => {
+export function ProfileSetupStep() {
+  const { onboardingData, updateOnboardingData } = useOnboarding();
   const { user } = useAuth();
-  const { onboardingData, updateOnboardingData, nextStep, completeStep } = useOnboarding();
   const { toast } = useToast();
+  
   const [isUploading, setIsUploading] = useState(false);
-  const [isUploadingPortfolio, setIsUploadingPortfolio] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const portfolioFileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  
+  const profileImageRef = useRef<HTMLInputElement>(null);
+  const votingImageRef = useRef<HTMLInputElement>(null);
 
-  const handlePhotoUpload = async (files: FileList | null) => {
+  const handleInputChange = (field: string, value: string) => {
+    updateOnboardingData({
+      basicInfo: {
+        ...onboardingData.basicInfo,
+        [field]: value
+      }
+    });
+  };
+
+  const handleFileUpload = async (type: 'profile' | 'voting', files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', files[0]);
+    setUploadProgress(0);
 
+    try {
+      const file = files[0];
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload an image file (JPEG, PNG, etc.)",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please upload an image smaller than 5MB",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 100);
+
+      // Upload to API
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const token = localStorage.getItem('token');
       const response = await fetch('https://api.swingboudoirmag.com/api/v1/upload', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: formData
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        updateOnboardingData({ profilePhoto: data.url });
-        toast({
-          title: "Photo uploaded!",
-          description: "Your profile photo has been updated."
-        });
-      } else {
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      if (!response.ok) {
         throw new Error('Upload failed');
       }
+
+      const data = await response.json();
+      const imageUrl = data.url || data.imageUrl;
+
+      // Update onboarding data based on type
+      if (type === 'profile') {
+        updateOnboardingData({
+          basicInfo: {
+            ...onboardingData.basicInfo,
+            profileImage: imageUrl
+          }
+        });
+      } else if (type === 'voting') {
+        updateOnboardingData({
+          basicInfo: {
+            ...onboardingData.basicInfo,
+            votingImage: imageUrl
+          }
+        });
+      }
+
+      toast({
+        title: "Upload successful",
+        description: `${type.charAt(0).toUpperCase() + type.slice(1)} image uploaded successfully`,
+      });
+
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload failed",
-        description: "Please try again with a different image.",
+        description: "Failed to upload image. Please try again.",
         variant: "destructive"
       });
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
-  const handlePortfolioUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-
-    setIsUploadingPortfolio(true);
-    try {
-      const uploadPromises = Array.from(files).map(async (file) => {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('https://api.swingboudoirmag.com/api/v1/upload', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: formData
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          return data.url;
-        } else {
-          throw new Error(`Failed to upload ${file.name}`);
+  const removeImage = (type: 'profile' | 'voting') => {
+    if (type === 'profile') {
+      updateOnboardingData({
+        basicInfo: {
+          ...onboardingData.basicInfo,
+          profileImage: undefined
         }
       });
-
-      const uploadedUrls = await Promise.all(uploadPromises);
-      const currentPhotos = onboardingData.portfolioPhotos || [];
-      const newPhotos = [...currentPhotos, ...uploadedUrls];
-      
-      // Limit to 20 photos
-      const limitedPhotos = newPhotos.slice(0, 20);
-      
-      updateOnboardingData({ portfolioPhotos: limitedPhotos });
-      
-      toast({
-        title: "Photos uploaded!",
-        description: `${uploadedUrls.length} photos have been added to your portfolio.`
+    } else if (type === 'voting') {
+      updateOnboardingData({
+        basicInfo: {
+          ...onboardingData.basicInfo,
+          votingImage: undefined
+        }
       });
-    } catch (error) {
-      toast({
-        title: "Upload failed",
-        description: "Please try again with different images.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUploadingPortfolio(false);
     }
-  };
-
-  const removePortfolioPhoto = (index: number) => {
-    const currentPhotos = onboardingData.portfolioPhotos || [];
-    const updatedPhotos = currentPhotos.filter((_, i) => i !== index);
-    updateOnboardingData({ portfolioPhotos: updatedPhotos });
-  };
-
-  const handleContinue = () => {
-    if (!onboardingData.basicInfo.name || !onboardingData.basicInfo.bio) {
-      toast({
-        title: "Please complete required fields",
-        description: "Name and bio are required to continue.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    completeStep('profile-setup');
-    nextStep();
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <h2 className="text-3xl font-bold text-gray-900">
-          Tell Us About Yourself
-        </h2>
-        <p className="text-gray-600 text-lg">
-          Let's create your amazing profile!
-        </p>
-      </div>
-
-      {/* Profile Photo */}
-      <div className="space-y-6">
-        <div className="text-center">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Profile Photo</h3>
-          
-          <div className="flex justify-center mb-4">
-            {onboardingData.profilePhoto ? (
-              <div className="relative">
-                <img
-                  src={onboardingData.profilePhoto}
-                  alt="Profile"
-                  className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
-                />
-                <button
-                  onClick={() => updateOnboardingData({ profilePhoto: undefined })}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600"
-                  aria-label="Remove profile photo"
-                  title="Remove profile photo"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center border-4 border-white shadow-lg">
-                <Camera className="h-12 w-12 text-gray-400" />
-              </div>
-            )}
-          </div>
-          
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept="image/*"
-            onChange={(e) => handlePhotoUpload(e.target.files)}
-            className="hidden"
-            aria-label="Upload profile photo"
-            title="Upload profile photo"
-          />
-          
-          <Button
-            onClick={() => fileInputRef.current?.click()}
-            variant="outline"
-            disabled={isUploading}
-            className="px-6 py-3"
-          >
-            <Upload className="mr-2 h-5 w-5" />
-            {isUploading ? 'Uploading...' : 'Upload Photo'}
-          </Button>
-        </div>
-      </div>
-
-      {/* Basic Information */}
-      <div className="space-y-6">
-        <h3 className="text-xl font-semibold text-gray-900 text-center">Basic Information</h3>
-        
-        <div className="space-y-4 max-w-md mx-auto">
-          <div>
-            <Label htmlFor="name" className="text-sm font-medium text-gray-700">
-              Your Name *
-            </Label>
-            <Input
-              id="name"
-              value={onboardingData.basicInfo.name}
-              onChange={(e) => updateOnboardingData({
-                basicInfo: { ...onboardingData.basicInfo, name: e.target.value }
-              })}
-              placeholder="Enter your full name"
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="bio" className="text-sm font-medium text-gray-700">
-              Tell us about yourself *
-            </Label>
-            <Textarea
-              id="bio"
-              value={onboardingData.basicInfo.bio}
-              onChange={(e) => updateOnboardingData({
-                basicInfo: { ...onboardingData.basicInfo, bio: e.target.value }
-              })}
-              placeholder="Share a bit about yourself, your interests, and what makes you unique..."
-              rows={4}
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="hobbies" className="text-sm font-medium text-gray-700">
-              Hobbies & Interests
-            </Label>
-            <Textarea
-              id="hobbies"
-              value={onboardingData.basicInfo.hobbies || ''}
-              onChange={(e) => updateOnboardingData({
-                basicInfo: { ...onboardingData.basicInfo, hobbies: e.target.value }
-              })}
-              placeholder="What do you love to do? (e.g., photography, fitness, travel, art...)"
-              rows={3}
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="age" className="text-sm font-medium text-gray-700">
-              Your Age
-            </Label>
-            <Input
-              id="age"
-              type="number"
-              value={onboardingData.basicInfo.age}
-              onChange={(e) => updateOnboardingData({
-                basicInfo: { ...onboardingData.basicInfo, age: e.target.value }
-              })}
-              placeholder="Your age"
-              min="18"
-              max="100"
-              className="mt-1"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="location" className="text-sm font-medium text-gray-700">
-              Where are you from?
-            </Label>
-            <Input
-              id="location"
-              value={onboardingData.basicInfo.location}
-              onChange={(e) => updateOnboardingData({
-                basicInfo: { ...onboardingData.basicInfo, location: e.target.value }
-              })}
-              placeholder="City, Country"
-              className="mt-1"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Messages for Voters */}
-      <div className="space-y-6">
-        <h3 className="text-xl font-semibold text-gray-900 text-center">Messages for Voters</h3>
-        
-        <div className="space-y-4 max-w-md mx-auto">
-          <div>
-            <Label htmlFor="paid-message" className="text-sm font-medium text-gray-700 flex items-center">
-              <Heart className="mr-2 h-4 w-4 text-pink-500" />
-              Message for Paid Voters
-            </Label>
-            <Textarea
-              id="paid-message"
-              value={onboardingData.basicInfo.paidVoterMessage || ''}
-              onChange={(e) => updateOnboardingData({
-                basicInfo: { ...onboardingData.basicInfo, paidVoterMessage: e.target.value }
-              })}
-              placeholder="Thank you for your support! Your votes mean the world to me..."
-              rows={3}
-              className="mt-1"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              This message will be shown to people who purchase votes for you
-            </p>
-          </div>
-
-          <div>
-            <Label htmlFor="free-message" className="text-sm font-medium text-gray-700 flex items-center">
-              <MessageCircle className="mr-2 h-4 w-4 text-blue-500" />
-              Message for Free Voters
-            </Label>
-            <Textarea
-              id="free-message"
-              value={onboardingData.basicInfo.freeVoterMessage || ''}
-              onChange={(e) => updateOnboardingData({
-                basicInfo: { ...onboardingData.basicInfo, freeVoterMessage: e.target.value }
-              })}
-              placeholder="Thank you for voting! Every vote counts and I appreciate your support..."
-              rows={3}
-              className="mt-1"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              This message will be shown to people who vote for you for free
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Portfolio Photos */}
-      <div className="space-y-6">
-        <div className="text-center">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Portfolio Photos (Up to 20)</h3>
-          <p className="text-gray-600 text-sm mb-4">
-            Upload your best photos to showcase your talent
-          </p>
-          
-          <input
-            type="file"
-            ref={portfolioFileInputRef}
-            accept="image/*"
-            multiple
-            onChange={(e) => handlePortfolioUpload(e.target.files)}
-            className="hidden"
-            aria-label="Upload portfolio photos"
-            title="Upload portfolio photos"
-          />
-          
-          <Button
-            onClick={() => portfolioFileInputRef.current?.click()}
-            variant="outline"
-            disabled={isUploadingPortfolio || (onboardingData.portfolioPhotos?.length || 0) >= 20}
-            className="px-6 py-3"
-          >
-            <Upload className="mr-2 h-5 w-5" />
-            {isUploadingPortfolio ? 'Uploading...' : 'Upload Photos'}
-          </Button>
-          
-          <p className="text-xs text-gray-500 mt-2">
-            {(onboardingData.portfolioPhotos?.length || 0)}/20 photos uploaded
-          </p>
-        </div>
-
-        {/* Portfolio Grid */}
-        {onboardingData.portfolioPhotos && onboardingData.portfolioPhotos.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-2xl mx-auto">
-            {onboardingData.portfolioPhotos.map((photo, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={photo}
-                  alt={`Portfolio ${index + 1}`}
-                  className="w-full h-32 object-cover rounded-lg"
-                />
-                <button
-                  onClick={() => removePortfolioPhoto(index)}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="Remove photo"
-                  title="Remove photo"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Continue Button */}
-      <div className="text-center pt-6">
-        <Button
-          onClick={handleContinue}
-          size="lg"
-          className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-12 py-4 text-lg font-semibold rounded-2xl"
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="max-w-3xl mx-auto space-y-6 px-4 sm:px-6 lg:px-8"
+    >
+      <div className="text-center space-y-3">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto"
         >
-          Continue
-        </Button>
+          <User className="w-8 h-8 text-white" />
+        </motion.div>
+        <motion.h2
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="text-2xl sm:text-3xl font-bold text-gray-900"
+        >
+          Create Your Profile
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto"
+        >
+          Let's set up your profile to showcase your unique personality and connect with voters
+        </motion.p>
       </div>
-    </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Basic Information */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Card className="h-full">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center text-lg">
+                <User className="w-5 h-5 mr-2" />
+                Basic Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  value={onboardingData.basicInfo?.name || ''}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  placeholder="Enter your full name"
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  value={onboardingData.basicInfo?.bio || ''}
+                  onChange={(e) => handleInputChange('bio', e.target.value)}
+                  placeholder="Tell us about yourself..."
+                  className="mt-1 min-h-[80px]"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="hobbies">Hobbies & Interests</Label>
+                <Textarea
+                  id="hobbies"
+                  value={onboardingData.basicInfo?.hobbies || ''}
+                  onChange={(e) => handleInputChange('hobbies', e.target.value)}
+                  placeholder="What are your hobbies and interests?"
+                  className="mt-1"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Profile Images */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          <Card className="h-full">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center text-lg">
+                <Camera className="w-5 h-5 mr-2" />
+                Profile Images
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Profile Image */}
+              <div>
+                <Label>Profile Picture</Label>
+                <div className="mt-2">
+                  {onboardingData.basicInfo?.profileImage ? (
+                    <div className="relative inline-block">
+                      <img
+                        src={onboardingData.basicInfo.profileImage}
+                        alt="Profile"
+                        className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-purple-200"
+                      />
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="absolute -top-2 -right-2 w-6 h-6 sm:w-8 sm:h-8 rounded-full p-0"
+                        onClick={() => removeImage('profile')}
+                      >
+                        <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => profileImageRef.current?.click()}
+                      disabled={isUploading}
+                      className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-2 border-dashed border-gray-300 hover:border-purple-500 flex flex-col items-center justify-center"
+                    >
+                      <Upload className="w-5 h-5 sm:w-6 sm:h-6 mb-1" />
+                      <span className="text-xs sm:text-sm">Upload</span>
+                    </Button>
+                  )}
+                  <input
+                    ref={profileImageRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload('profile', e.target.files)}
+                    className="hidden"
+                    aria-label="Upload profile picture"
+                  />
+                </div>
+              </div>
+
+              {/* Voting Image */}
+              <div>
+                <Label>Voting Image</Label>
+                <div className="mt-2">
+                  {onboardingData.basicInfo?.votingImage ? (
+                    <div className="relative inline-block">
+                      <img
+                        src={onboardingData.basicInfo.votingImage}
+                        alt="Voting"
+                        className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg object-cover border-4 border-pink-200"
+                      />
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="absolute -top-2 -right-2 w-6 h-6 sm:w-8 sm:h-8 rounded-full p-0"
+                        onClick={() => removeImage('voting')}
+                      >
+                        <X className="w-3 h-3 sm:w-4 sm:h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={() => votingImageRef.current?.click()}
+                      disabled={isUploading}
+                      className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg border-2 border-dashed border-gray-300 hover:border-pink-500 flex flex-col items-center justify-center"
+                    >
+                      <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6 mb-1" />
+                      <span className="text-xs sm:text-sm">Upload</span>
+                    </Button>
+                  )}
+                  <input
+                    ref={votingImageRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload('voting', e.target.files)}
+                    className="hidden"
+                    aria-label="Upload voting image"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Voter Messages */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+      >
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center text-lg">
+              <MessageCircle className="w-5 h-5 mr-2" />
+              Messages for Voters
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="paidMessage" className="flex items-center">
+                <Star className="w-4 h-4 mr-2 text-yellow-500" />
+                Message for Paid Voters
+              </Label>
+              <Textarea
+                id="paidMessage"
+                value={onboardingData.basicInfo?.paidVoterMessage || ''}
+                onChange={(e) => handleInputChange('paidVoterMessage', e.target.value)}
+                placeholder="Thank your premium supporters..."
+                className="mt-1 min-h-[80px]"
+              />
+            </div>
+            <div>
+              <Label htmlFor="freeMessage" className="flex items-center">
+                <Heart className="w-4 h-4 mr-2 text-red-500" />
+                Message for Free Voters
+              </Label>
+              <Textarea
+                id="freeMessage"
+                value={onboardingData.basicInfo?.freeVoterMessage || ''}
+                onChange={(e) => handleInputChange('freeVoterMessage', e.target.value)}
+                placeholder="Thank your free voters..."
+                className="mt-1 min-h-[80px]"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Upload Progress */}
+      {isUploading && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        >
+          <Card className="p-6 max-w-sm w-full mx-4">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Uploading...</h3>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <p className="text-sm text-gray-600 mt-2">{uploadProgress}%</p>
+            </div>
+          </Card>
+        </motion.div>
+      )}
+    </motion.div>
   );
-}; 
+} 
