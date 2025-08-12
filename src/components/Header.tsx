@@ -3,8 +3,10 @@ import { Menu, Trophy, User, Bell, LogOut, Settings, SettingsIcon } from "lucide
 import { useLocation, useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/contexts/NotificationContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 interface HeaderProps {
   onSidebarToggle?: () => void;
@@ -14,6 +16,7 @@ const Header = ({ onSidebarToggle }: HeaderProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, handleLogout } = useAuth();
+  const { unreadCount } = useNotifications();
   const isDashboardPage = location.pathname.startsWith("/dashboard");
 
   const handleLogoutClick = async () => {
@@ -23,6 +26,10 @@ const Header = ({ onSidebarToggle }: HeaderProps) => {
     } catch (error) {
       console.error("Logout failed:", error);
     }
+  };
+
+  const handleNotificationsClick = () => {
+    navigate("/dashboard/notifications");
   };
 
   const getInitials = (name: string) => {
@@ -68,39 +75,75 @@ const Header = ({ onSidebarToggle }: HeaderProps) => {
 
           {/* Profile Menu - Show when authenticated */}
           {isAuthenticated && user && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.image} alt={user.name} />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">{getInitials(user.name)}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56 p-0" align="end">
-                <div className="p-4 border-b">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user.name}</p>
-                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+            <>
+              {/* Notifications Icon */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleNotificationsClick}
+                className="relative h-8 w-8 rounded-full p-0"
+              >
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Badge>
+                )}
+              </Button>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.image} alt={user.name} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">{getInitials(user.name)}</AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-0" align="end">
+                  <div className="p-4 border-b">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="p-2">
-                  <Button variant="ghost" className="w-full justify-start h-9 px-2" onClick={() => navigate("/dashboard/", { replace: true, flushSync: true })}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Dashboard</span>
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start h-9 px-2" onClick={() => navigate("/dashboard/settings", { replace: true, flushSync: true })}>
-                    <SettingsIcon className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </Button>
-                  <div className="border-t my-2" />
-                  <Button variant="ghost" className="w-full justify-start h-9 px-2 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleLogoutClick}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
+                  <div className="p-2">
+                    <Button variant="ghost" className="w-full justify-start h-9 px-2" onClick={() => navigate("/dashboard/", { replace: true, flushSync: true })}>
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Button>
+                    <Button variant="ghost" className="w-full justify-start h-9 px-2" onClick={() => navigate("/dashboard/settings", { replace: true, flushSync: true })}>
+                      <SettingsIcon className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </Button>
+                    <div className="border-t my-2" />
+                    <Button variant="ghost" className="w-full justify-start h-9 px-2 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={handleLogoutClick}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </>
+          )}
+
+          {/* Auth Buttons - Show when not authenticated */}
+          {!isAuthenticated && (
+            <div className="flex items-center space-x-4">
+              <Link to="/auth/sign-in">
+                <Button variant="ghost" size="sm">
+                  Sign In
+                </Button>
+              </Link>
+              <Link to="/auth/sign-up">
+                <Button size="sm">
+                  Sign Up
+                </Button>
+              </Link>
+            </div>
           )}
         </div>
       </div>

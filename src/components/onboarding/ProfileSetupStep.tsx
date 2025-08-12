@@ -211,6 +211,86 @@ export function ProfileSetupStep() {
                 className="mt-1.5 border-gray-200 focus:border-purple-400 focus:ring-1 focus:ring-purple-400 resize-none"
               />
             </div>
+
+            {/* Social Media Links */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="instagram" className="text-sm font-medium text-gray-800">Instagram</Label>
+                <Input
+                  id="instagram"
+                  type="url"
+                  value={onboardingData.basicInfo?.socialMedia?.instagram || ''}
+                  onChange={(e) => updateOnboardingData({
+                    basicInfo: {
+                      ...onboardingData.basicInfo,
+                      socialMedia: {
+                        ...onboardingData.basicInfo?.socialMedia,
+                        instagram: e.target.value
+                      }
+                    }
+                  })}
+                  placeholder="https://instagram.com/yourusername"
+                  className="mt-1.5 border-gray-200 focus:border-purple-400 focus:ring-1 focus:ring-purple-400"
+                />
+              </div>
+              <div>
+                <Label htmlFor="tiktok" className="text-sm font-medium text-gray-800">TikTok</Label>
+                <Input
+                  id="tiktok"
+                  type="url"
+                  value={onboardingData.basicInfo?.socialMedia?.tiktok || ''}
+                  onChange={(e) => updateOnboardingData({
+                    basicInfo: {
+                      ...onboardingData.basicInfo,
+                      socialMedia: {
+                        ...onboardingData.basicInfo?.socialMedia,
+                        tiktok: e.target.value
+                      }
+                    }
+                  })}
+                  placeholder="https://tiktok.com/@yourusername"
+                  className="mt-1.5 border-gray-200 focus:border-purple-400 focus:ring-1 focus:ring-purple-400"
+                />
+              </div>
+              <div>
+                <Label htmlFor="twitter" className="text-sm font-medium text-gray-800">Twitter</Label>
+                <Input
+                  id="twitter"
+                  type="url"
+                  value={onboardingData.basicInfo?.socialMedia?.twitter || ''}
+                  onChange={(e) => updateOnboardingData({
+                    basicInfo: {
+                      ...onboardingData.basicInfo,
+                      socialMedia: {
+                        ...onboardingData.basicInfo?.socialMedia,
+                        twitter: e.target.value
+                      }
+                    }
+                  })}
+                  placeholder="https://twitter.com/yourusername"
+                  className="mt-1.5 border-gray-200 focus:border-purple-400 focus:ring-1 focus:ring-purple-400"
+                />
+              </div>
+              <div>
+                <Label htmlFor="youtube" className="text-sm font-medium text-gray-800">YouTube</Label>
+                <Input
+                  id="youtube"
+                  type="url"
+                  value={onboardingData.basicInfo?.socialMedia?.youtube || ''}
+                  onChange={(e) => updateOnboardingData({
+                    basicInfo: {
+                      ...onboardingData.basicInfo,
+                      socialMedia: {
+                        ...onboardingData.basicInfo?.socialMedia,
+                        youtube: e.target.value
+                      }
+                    }
+                  })}
+                  placeholder="https://youtube.com/@yourchannel"
+                  className="mt-1.5 border-gray-200 focus:border-purple-400 focus:ring-1 focus:ring-purple-400"
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
 

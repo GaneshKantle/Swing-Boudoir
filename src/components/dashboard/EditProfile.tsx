@@ -7,38 +7,43 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Edit, Save, Trash2, X, Trophy, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useUploadThing, uploadFiles } from "@/lib/uploadthing";
 import { useCompetitions } from "@/hooks/useCompetitions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { useProfile } from "@/hooks/useProfile";
 import { UpdateProfileRequest } from "@/hooks/useProfile";
-
-// Charity options - this could come from an API in the future
-const charities = [
-  { value: "american-red-cross", label: "American Red Cross" },
-  { value: "unicef", label: "UNICEF" },
-  { value: "doctors-without-borders", label: "Doctors Without Borders" },
-  { value: "world-wildlife-fund", label: "World Wildlife Fund" },
-  { value: "habitat-for-humanity", label: "Habitat for Humanity" },
-];
+import axios from "axios";
 
 export function EditProfile() {
   const [profile, setProfile] = useState({
     name: "",
     bio: "",
-    charity: "",
-    charityReason: "",
     hobbies: "",
     voterMessage: "",
-    freeVoterMessage: ""
+    freeVoterMessage: "",
+    phone: "",
+    address: "",
+    city: "",
+    country: "",
+    postalCode: "",
+    dateOfBirth: "",
+    gender: "",
+    instagram: "",
+    tiktok: "",
+    youtube: "",
+    facebook: "",
+    twitter: "",
+    linkedin: "",
+    website: ""
   });
   const [isEditing, setIsEditing] = useState(false);
   const [profileImages, setProfileImages] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const profileFileInputRef = useRef<HTMLInputElement>(null);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
 
   // Use the profile hook
   const { 
@@ -59,11 +64,23 @@ export function EditProfile() {
       setProfile({
         name: profileData.bio || "",
         bio: profileData.bio || "",
-        charity: "", // This field doesn't exist in the API profile
-        charityReason: "", // This field doesn't exist in the API profile
         hobbies: profileData.hobbiesAndPassions || "",
         voterMessage: profileData.paidVoterMessage || "",
-        freeVoterMessage: profileData.freeVoterMessage || ""
+        freeVoterMessage: profileData.freeVoterMessage || "",
+        phone: profileData.phone || "",
+        address: profileData.address || "",
+        city: profileData.city || "",
+        country: profileData.country || "",
+        postalCode: profileData.postalCode || "",
+        dateOfBirth: profileData.dateOfBirth || "",
+        gender: profileData.gender || "",
+        instagram: profileData.instagram || "",
+        tiktok: profileData.tiktok || "",
+        youtube: profileData.youtube || "",
+        facebook: profileData.facebook || "",
+        twitter: profileData.twitter || "",
+        linkedin: profileData.linkedin || "",
+        website: profileData.website || ""
       });
 
       // Set profile images from API data
@@ -74,12 +91,6 @@ export function EditProfile() {
       }
     }
   }, [profileData]);
-
-  const { startUpload, routeConfig } = useUploadThing("profileImages", {
-    onUploadBegin: (fileName) => {
-      console.log("upload has begun for", fileName);
-    },
-  });
 
   const saveProfile = async () => {
     if (!profileData?.id) {
@@ -93,16 +104,38 @@ export function EditProfile() {
 
     setIsSaving(true);
     try {
-      const updateData: UpdateProfileRequest = {
-        bio: profile.bio,
-        hobbiesAndPassions: profile.hobbies,
-        paidVoterMessage: profile.voterMessage,
-        freeVoterMessage: profile.freeVoterMessage,
-        // Note: charity and charityReason are not part of the API profile model
-        // These would need to be added to the API or stored separately
-      };
-
-      await updateProfile.mutateAsync({ id: profileData.id, data: updateData });
+      // Use the real API endpoint
+      const token = localStorage.getItem('token');
+      const response = await axios.patch(
+        `https://api.swingboudoirmag.com/api/v1/profile/${profileData.id}`,
+        {
+          userId: profileData.userId,
+          bio: profile.bio,
+          phone: profile.phone,
+          address: profile.address,
+          city: profile.city,
+          country: profile.country,
+          postalCode: profile.postalCode,
+          dateOfBirth: profile.dateOfBirth,
+          gender: profile.gender,
+          hobbiesAndPassions: profile.hobbies,
+          paidVoterMessage: profile.voterMessage,
+          freeVoterMessage: profile.freeVoterMessage,
+          instagram: profile.instagram,
+          tiktok: profile.tiktok,
+          youtube: profile.youtube,
+          facebook: profile.facebook,
+          twitter: profile.twitter,
+          linkedin: profile.linkedin,
+          website: profile.website
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
       
       setIsEditing(false);
       toast({
@@ -110,6 +143,7 @@ export function EditProfile() {
         description: "Your profile has been saved successfully.",
       });
     } catch (error) {
+      console.error('Update profile error:', error);
       toast({
         title: "Error",
         description: "Failed to save profile. Please try again.",
@@ -135,14 +169,11 @@ export function EditProfile() {
       return;
     }
 
+    setIsUploading(true);
     try {
-      // Upload files to the API
-      await uploadProfilePhotos.mutateAsync({ 
-        id: profileData.id, 
-        files: Array.from(files) 
-      });
-
-      // Update local state for immediate UI feedback
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      
       Array.from(files).forEach(file => {
         if (!file.type.startsWith('image/')) {
           toast({
@@ -152,7 +183,23 @@ export function EditProfile() {
           });
           return;
         }
+        formData.append('files', file);
+      });
 
+      // Use the real API endpoint
+      const response = await axios.post(
+        `https://api.swingboudoirmag.com/api/v1/profile/${profileData.id}/upload/photos`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      // Update local state for immediate UI feedback
+      Array.from(files).forEach(file => {
         const reader = new FileReader();
         reader.onload = (e) => {
           const imageUrl = e.target?.result as string;
@@ -166,33 +213,51 @@ export function EditProfile() {
         description: `${files.length} image(s) have been uploaded successfully.`,
       });
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload Failed",
         description: "Failed to upload images. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const handleCoverImageUpload = async (files: FileList | null) => {
     if (!files || !profileData?.id) return;
 
+    setIsUploading(true);
     try {
-      await uploadCoverImage.mutateAsync({ 
-        id: profileData.id, 
-        file: Array.from(files)[0] 
-      });
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('file', files[0]);
+
+      // Use the real API endpoint
+      const response = await axios.post(
+        `https://api.swingboudoirmag.com/api/v1/profile/${profileData.id}/upload/cover`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
 
       toast({
         title: "Cover Image Uploaded!",
         description: "Your cover image has been uploaded successfully.",
       });
     } catch (error) {
+      console.error('Cover upload error:', error);
       toast({
         title: "Upload Failed",
         description: "Failed to upload cover image. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -240,7 +305,17 @@ export function EditProfile() {
     if (!profileData?.id) return;
 
     try {
-      await removeProfilePhoto.mutateAsync({ id: profileData.id, imageId: photoId });
+      // Use the real API endpoint
+      const token = localStorage.getItem('token');
+      await axios.delete(
+        `https://api.swingboudoirmag.com/api/v1/profile/${profileData.id}/images/${photoId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
       toast({
         title: "Profile Photo Removed",
         description: "Profile photo has been removed successfully.",
@@ -248,6 +323,7 @@ export function EditProfile() {
       // Update local state to remove the deleted photo
       setProfileImages(prev => prev.filter(url => url !== profileData.profilePhotos?.find(p => p.id === photoId)?.url));
     } catch (error) {
+      console.error('Remove photo error:', error);
       toast({
         title: "Error",
         description: "Failed to remove profile photo. Please try again.",
@@ -274,11 +350,11 @@ export function EditProfile() {
         <Button 
           onClick={isEditing ? saveProfile : () => setIsEditing(true)}
           className="flex items-center gap-2"
-          disabled={isSaving || updateProfile.isPending}
+          disabled={isSaving || isUploading}
           size="sm"
         >
           {isEditing ? <Save className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-          {isEditing ? (isSaving || updateProfile.isPending ? "Saving..." : "Save Changes") : "Edit Profile"}
+          {isEditing ? (isSaving ? "Saving..." : "Save Changes") : "Edit Profile"}
         </Button>
       </div>
 
@@ -313,7 +389,7 @@ export function EditProfile() {
             </div>
 
             <div>
-              <Label htmlFor="hobbies">Hobbies</Label>
+              <Label htmlFor="hobbies">Hobbies & Interests</Label>
               <Textarea
                 id="hobbies"
                 value={profile.hobbies}
@@ -323,43 +399,95 @@ export function EditProfile() {
                 className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
               />
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Charity Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Charity Support</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="charity">Which charity would you like to support if you win?</Label>
-              <Select 
-                value={profile.charity}
-                onValueChange={(value) => setProfile({ ...profile, charity: value })}
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                value={profile.phone}
+                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                 disabled={!isEditing}
-              >
-                <SelectTrigger className={!isEditing ? "bg-muted cursor-not-allowed" : ""}>
-                  <SelectValue placeholder="Select a charity" />
-                </SelectTrigger>
-                <SelectContent>
-                  {charities.map((charity) => (
-                    <SelectItem key={charity.value} value={charity.value}>
-                      {charity.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="+1 210 456 2719"
+                className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
+              />
             </div>
 
             <div>
-              <Label htmlFor="charityReason">Why did you choose this cause?</Label>
-              <Textarea
-                id="charityReason"
-                value={profile.charityReason}
-                onChange={(e) => setProfile({ ...profile, charityReason: e.target.value })}
+              <Label htmlFor="city">City</Label>
+              <Input
+                id="city"
+                value={profile.city}
+                onChange={(e) => setProfile({ ...profile, city: e.target.value })}
                 disabled={!isEditing}
-                rows={3}
+                placeholder="Manhattan"
+                className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="country">Country</Label>
+              <Input
+                id="country"
+                value={profile.country}
+                onChange={(e) => setProfile({ ...profile, country: e.target.value })}
+                disabled={!isEditing}
+                placeholder="United States"
+                className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Social Media Links */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Social Media Links</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="instagram">Instagram</Label>
+              <Input
+                id="instagram"
+                value={profile.instagram}
+                onChange={(e) => setProfile({ ...profile, instagram: e.target.value })}
+                disabled={!isEditing}
+                placeholder="https://instagram.com/yourusername"
+                className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="tiktok">TikTok</Label>
+              <Input
+                id="tiktok"
+                value={profile.tiktok}
+                onChange={(e) => setProfile({ ...profile, tiktok: e.target.value })}
+                disabled={!isEditing}
+                placeholder="https://tiktok.com/@yourusername"
+                className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="youtube">YouTube</Label>
+              <Input
+                id="youtube"
+                value={profile.youtube}
+                onChange={(e) => setProfile({ ...profile, youtube: e.target.value })}
+                disabled={!isEditing}
+                placeholder="https://youtube.com/@yourchannel"
+                className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="twitter">Twitter</Label>
+              <Input
+                id="twitter"
+                value={profile.twitter}
+                onChange={(e) => setProfile({ ...profile, twitter: e.target.value })}
+                disabled={!isEditing}
+                placeholder="https://twitter.com/yourusername"
                 className={!isEditing ? "bg-muted cursor-not-allowed" : ""}
               />
             </div>
@@ -407,12 +535,12 @@ export function EditProfile() {
         <CardContent>
           <input
             type="file"
-            id="coverImageInput"
+            ref={coverFileInputRef}
             accept="image/*"
             onChange={(e) => handleCoverImageUpload(e.target.files)}
             className="hidden"
             aria-label="Upload profile cover image"
-            disabled={uploadCoverImage.isPending}
+            disabled={isUploading}
           />
           
           {profileData?.coverImage?.url && (
@@ -447,11 +575,11 @@ export function EditProfile() {
             </p>
             <Button 
               variant="outline"
-              onClick={() => document.getElementById('coverImageInput')?.click()}
-              disabled={uploadCoverImage.isPending}
+              onClick={() => coverFileInputRef.current?.click()}
+              disabled={isUploading}
             >
               <Upload className="mr-2 h-4 w-4" />
-              {uploadCoverImage.isPending ? "Uploading..." : "Upload Cover Image"}
+              {isUploading ? "Uploading..." : "Upload Cover Image"}
             </Button>
           </div>
         </CardContent>
@@ -471,7 +599,7 @@ export function EditProfile() {
             onChange={(e) => handleFileUpload(e.target.files)}
             className="hidden"
             aria-label="Upload profile photos"
-            disabled={uploadProfilePhotos.isPending}
+            disabled={isUploading}
           />
           
           {profileImages.length > 0 && (
@@ -492,7 +620,7 @@ export function EditProfile() {
                     className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                     aria-label={`Remove profile image ${index + 1}`}
                     title={`Remove profile image ${index + 1}`}
-                    disabled={removeProfilePhoto.isPending}
+                    disabled={isUploading}
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -522,7 +650,7 @@ export function EditProfile() {
                       className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                       aria-label={`Remove profile photo ${index + 1}`}
                       title={`Remove profile photo ${index + 1}`}
-                      disabled={removeProfilePhoto.isPending}
+                      disabled={isUploading}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -540,32 +668,10 @@ export function EditProfile() {
             <Button 
               variant="outline"
               onClick={() => profileFileInputRef.current?.click()}
-              disabled={profileImages.length >= 20 || uploadProfilePhotos.isPending}
+              disabled={profileImages.length >= 20 || isUploading}
             >
               <Upload className="mr-2 h-4 w-4" />
-              {uploadProfilePhotos.isPending ? "Uploading..." : "Upload Profile Photos"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Competition Enrollments - Removed mock data, showing empty state */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Trophy className="mr-2 h-5 w-5" />
-            Competition Enrollments
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h4 className="text-lg font-semibold mb-2">No Competitions Registered</h4>
-            <p className="text-muted-foreground mb-4">
-              You haven't registered for any competitions yet.
-            </p>
-            <Button variant="outline" onClick={() => window.location.href = '/competitions'}>
-              Browse Competitions
+              {isUploading ? "Uploading..." : "Upload Profile Photos"}
             </Button>
           </div>
         </CardContent>

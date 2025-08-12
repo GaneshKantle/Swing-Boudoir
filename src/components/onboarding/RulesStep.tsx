@@ -11,18 +11,18 @@ export const RulesStep: React.FC = () => {
   const rules = [
     {
       icon: <Shield className="h-6 w-6 text-green-500" />,
-      title: "Stay Safe",
-      description: "Never share personal information like your address or phone number"
+      // title: "Stay Safe",
+      // description: "Never share personal information like your address or phone number"
     },
     {
       icon: <Camera className="h-6 w-6 text-purple-500" />,
       title: "Upload Quality Photos",
-      description: "Only upload professional, appropriate photos"
+      // description: "Only upload professional, appropriate photos"
     },
     {
       icon: <Heart className="h-6 w-6 text-pink-500" />,
       title: "Be Respectful",
-      description: "Treat everyone with kindness and respect"
+      // description: "Treat everyone with kindness and respect"
     }
   ];
 
@@ -78,7 +78,7 @@ export const RulesStep: React.FC = () => {
         <h3 className="text-lg font-semibold text-red-800 mb-3 text-center">🛡️ Safety First</h3>
         <div className="space-y-2 text-sm text-red-700">
           <p>• Trust your instincts - if something feels wrong, report it</p>
-          <p>• Never meet anyone in private places</p>
+          {/* <p>• Never meet anyone in private places</p> */}
           <p>• Report any inappropriate behavior immediately</p>
           <p>• We're here to keep you safe 24/7</p>
         </div>

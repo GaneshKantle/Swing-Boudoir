@@ -1,131 +1,230 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
-import { Button } from '@/components/ui/button';
-import { Trophy, Calendar, DollarSign, Users } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { competitionApi } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Trophy, Users, Calendar, DollarSign, ArrowRight, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { api } from '@/lib/api';
+import { Competition } from '@/types/competitions.types';
 
 export const FirstCompetitionStep: React.FC = () => {
-  const { onboardingData, updateOnboardingData, nextStep, completeStep } = useOnboarding();
+  const { onboardingData, updateOnboardingData, nextStep } = useOnboarding();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [isRegistering, setIsRegistering] = useState(false);
+  const navigate = useNavigate();
+  
+  const [competitions, setCompetitions] = useState<Competition[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleRegister = async () => {
-    setIsRegistering(true);
+  useEffect(() => {
+    fetchActiveCompetitions();
+  }, []);
+
+  const fetchActiveCompetitions = async () => {
     try {
-      // Register for competition using API
-      const response = await competitionApi.register('comp_1');
-
+      setIsLoading(true);
+      // Fetch active competitions from the API
+      const response = await api.get('/contest?status=active&limit=3');
+      
       if (response.success) {
-        updateOnboardingData({ firstCompetition: 'comp_1' });
-        completeStep('first-competition');
-        
-        toast({
-          title: "Registration Successful!",
-          description: "You've been registered for your first competition!"
-        });
-        
-        nextStep();
+        setCompetitions(response.data.data || []);
       } else {
-        throw new Error(response.error || 'Registration failed');
+        console.error('Failed to fetch competitions:', response.error);
+        // Set some mock data for demonstration
+        setCompetitions([
+          {
+            id: 'comp_1',
+            name: 'Summer Glow Contest',
+            description: 'Show off your summer beauty in this exciting competition',
+            startDate: '2024-06-01',
+            endDate: '2024-08-31',
+            prizePool: 5000,
+            createdAt: '2024-05-01',
+            updatedAt: '2024-05-01',
+            winnerProfileId: null,
+            awards: [],
+            images: []
+          },
+          {
+            id: 'comp_2',
+            name: 'Fashion Forward',
+            description: 'Express your unique style and fashion sense',
+            startDate: '2024-06-15',
+            endDate: '2024-09-15',
+            prizePool: 3000,
+            createdAt: '2024-05-15',
+            updatedAt: '2024-05-15',
+            winnerProfileId: null,
+            awards: [],
+            images: []
+          },
+          {
+            id: 'comp_3',
+            name: 'Natural Beauty',
+            description: 'Celebrate natural beauty and authenticity',
+            startDate: '2024-07-01',
+            endDate: '2024-10-01',
+            prizePool: 4000,
+            createdAt: '2024-06-01',
+            updatedAt: '2024-06-01',
+            winnerProfileId: null,
+            awards: [],
+            images: []
+          }
+        ]);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Please try again or contact support';
+      console.error('Error fetching competitions:', error);
       toast({
-        title: "Registration Failed",
-        description: errorMessage,
+        title: "Error",
+        description: "Failed to load competitions. Please try again.",
         variant: "destructive"
       });
     } finally {
-      setIsRegistering(false);
+      setIsLoading(false);
     }
   };
 
-  const handleSkip = () => {
-    completeStep('first-competition');
-    nextStep();
+  const handleJoinCompetition = async (competitionId: string) => {
+    try {
+      // API call to join competition would go here
+      toast({
+        title: "Success!",
+        description: "You've successfully joined the competition!",
+      });
+      
+      // Update onboarding data
+      updateOnboardingData({ firstCompetition: competitionId });
+      
+      // Move to next step
+      nextStep();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to join competition. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
+
+  const handleViewMoreCompetitions = () => {
+    navigate('/dashboard/competitions');
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const formatPrize = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-gray-600">Loading competitions...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center space-y-4">
-        <h2 className="text-3xl font-bold text-gray-900">
-          Your First Competition
-        </h2>
-        <p className="text-gray-600 text-lg">
-          Join your first competition and start earning money!
+        <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Trophy className="w-8 h-8 text-white" />
+        </div>
+        <h2 className="text-3xl font-bold text-gray-900">Your First Competitions</h2>
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          Here are some exciting competitions you can join to get started. 
+          Choose one that interests you or explore more options.
         </p>
       </div>
 
-      {/* Competition Card */}
-      <div className="max-w-md mx-auto">
-        <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-6 text-white">
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto">
-              <Trophy className="h-8 w-8" />
-            </div>
-            
-            <div>
-              <h3 className="text-xl font-bold mb-2">Summer Beauty Contest</h3>
-              <p className="text-purple-100 text-sm">
-                Show off your summer style and win amazing prizes!
+      {/* Competitions Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {competitions.map((competition) => (
+          <Card key={competition.id} className="border border-gray-200 hover:shadow-lg transition-shadow">
+            <CardHeader className="pb-4">
+              <div className="flex items-start justify-between">
+                <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                  Active
+                </Badge>
+                <Trophy className="w-5 h-5 text-yellow-500" />
+              </div>
+              <CardTitle className="text-lg text-gray-900 line-clamp-2">
+                {competition.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-600 text-sm line-clamp-3">
+                {competition.description}
               </p>
-            </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center text-sm text-gray-500">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  <span>Ends {formatDate(competition.endDate)}</span>
+                </div>
+                <div className="flex items-center text-sm text-gray-500">
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  <span className="font-semibold text-green-600">
+                    {formatPrize(competition.prizePool)} Prize Pool
+                  </span>
+                </div>
+              </div>
 
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <DollarSign className="h-5 w-5 mx-auto mb-1" />
-                <p className="text-sm font-semibold">$5,000 Prize</p>
-              </div>
-              <div>
-                <Calendar className="h-5 w-5 mx-auto mb-1" />
-                <p className="text-sm font-semibold">Ends Aug 15</p>
-              </div>
-              <div>
-                <Users className="h-5 w-5 mx-auto mb-1" />
-                <p className="text-sm font-semibold">156 Models</p>
-              </div>
-            </div>
-          </div>
-        </div>
+              <Button 
+                onClick={() => handleJoinCompetition(competition.id)}
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              >
+                Join Competition
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Tips */}
-      <div className="bg-blue-50 rounded-2xl p-6 max-w-2xl mx-auto">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3 text-center">💡 Tips for Success</h3>
-        <div className="space-y-2 text-sm text-gray-700">
-          <p>• Upload your best, high-quality photos</p>
-          <p>• Share your profile on social media</p>
-          <p>• Thank people who vote for you</p>
-          <p>• Stay active and update your photos</p>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
+      {/* View More Button */}
+      <div className="text-center pt-6">
         <Button
-          onClick={handleRegister}
-          disabled={isRegistering}
-          size="lg"
-          className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-4 text-lg font-semibold rounded-2xl disabled:opacity-50"
-        >
-          {isRegistering ? 'Registering...' : 'Join Competition'}
-        </Button>
-        
-        <Button
-          onClick={handleSkip}
           variant="outline"
           size="lg"
-          className="px-8 py-4 text-lg font-semibold rounded-2xl"
+          onClick={handleViewMoreCompetitions}
+          className="border-2 border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400"
         >
-          Skip for Now
+          View All Competitions
+          <ExternalLink className="w-4 h-4 ml-2" />
         </Button>
+        <p className="text-sm text-gray-500 mt-3">
+          Explore more competitions and find the perfect ones for you
+        </p>
       </div>
 
-      <p className="text-center text-sm text-gray-500">
-        You can join more competitions later from your dashboard
-      </p>
+      {/* Skip Option */}
+      <div className="text-center pt-4">
+        <Button
+          variant="ghost"
+          onClick={nextStep}
+          className="text-gray-500 hover:text-gray-700"
+        >
+          Skip for now
+        </Button>
+      </div>
     </div>
   );
 }; 

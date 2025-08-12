@@ -18,40 +18,40 @@ export function WelcomeStep() {
     {
       icon: <Trophy className="w-5 h-5" />,
       title: "Win Competitions",
-      description: "Participate in contests and win prizes"
+      // description: "Participate in contests and win prizes"
     },
     {
       icon: <Users className="w-5 h-5" />,
       title: "Build Your Fanbase",
-      description: "Connect with voters and grow your community"
+      // description: "Connect with voters and grow your community"
     },
     {
       icon: <Heart className="w-5 h-5" />,
       title: "Get Voted",
-      description: "Receive votes and climb the leaderboards"
+      // description: "Receive votes and climb the leaderboards"
     },
     {
       icon: <Camera className="w-5 h-5" />,
       title: "Showcase Talent",
-      description: "Display your portfolio and best work"
+      // description: "Display your portfolio and best work"
     },
     {
       icon: <Globe className="w-5 h-5" />,
       title: "Global Reach",
-      description: "Connect with people worldwide"
+      // description: "Connect with people worldwide"
     },
     {
       icon: <Star className="w-5 h-5" />,
       title: "Premium Features",
-      description: "Access exclusive tools and analytics"
+      // description: "Access exclusive tools and analytics"
     }
   ];
 
   const stats = [
-    { number: "10K+", label: "Active Models" },
-    { number: "50K+", label: "Happy Voters" },
-    { number: "100+", label: "Competitions" },
-    { number: "1M+", label: "Votes Cast" }
+    { number: "5K+", label: "Active Models" },
+    { number: "10K+", label: "Happy Voters" },
+    { number: "50+", label: "Competitions" },
+    { number: "100K+", label: "Votes Cast" }
   ];
 
   return (
@@ -69,7 +69,6 @@ export function WelcomeStep() {
 
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
           Join thousands of models who have found success, built their fanbase, and won amazing prizes. 
-          Create your profile and start your path to stardom.
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-2">
@@ -124,7 +123,7 @@ export function WelcomeStep() {
       </div>
 
       {/* Call to Action */}
-      <div className="text-center">
+      {/* <div className="text-center">
         <Card className="bg-purple-50 border border-purple-100">
           <CardContent className="p-8">
             <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -141,7 +140,7 @@ export function WelcomeStep() {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
     </div>
   );
 }

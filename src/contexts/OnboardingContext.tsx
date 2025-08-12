@@ -19,6 +19,7 @@ export interface OnboardingData {
       instagram?: string;
       tiktok?: string;
       twitter?: string;
+      youtube?: string;
     };
   };
   preferences: {
@@ -26,6 +27,7 @@ export interface OnboardingData {
     interests: string[];
     notifications: boolean;
   };
+  firstCompetition?: string;
   completedSteps: string[];
 }
 
@@ -64,28 +66,10 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
     required: true,
   },
   {
-    id: "profile-setup",
-    title: "Complete Your Profile",
-    description: "Tell us about yourself and upload your photos",
-    phase: 1,
-    completed: false,
-    required: true,
-  },
-  {
-    id: "preferences",
-    title: "Your Preferences & Goals",
-    description: "Help us match you with the right opportunities",
-    phase: 1,
-    completed: false,
-    required: true,
-  },
-
-  // Phase 2: Platform Education
-  {
     id: "tutorial",
     title: "How It Works",
     description: "Learn how competitions and voting work",
-    phase: 2,
+    phase: 1,
     completed: false,
     required: true,
   },
@@ -93,6 +77,22 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
     id: "rules",
     title: "Rules & Guidelines",
     description: "Important information to keep you safe and successful",
+    phase: 1,
+    completed: false,
+    required: true,
+  },
+  {
+    id: "profile-setup",
+    title: "Complete Your Profile",
+    description: "Tell us about yourself and upload your photos",
+    phase: 2,
+    completed: false,
+    required: true,
+  },
+  {
+    id: "preferences",
+    title: "Your Preferences & Goals",
+    description: "Help us match you with the right opportunities",
     phase: 2,
     completed: false,
     required: true,

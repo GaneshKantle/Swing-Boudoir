@@ -65,7 +65,7 @@ export default function Dashboard() {
   const { section } = useParams<{ section?: DashboardSection }>();
   const navigate = useNavigate();
   const { isAuthenticated, checkUserNeedsOnboarding } = useAuth();
-  const [activeSection, setActiveSection] = useState<DashboardSection>((section as DashboardSection) || "notifications");
+  const [activeSection, setActiveSection] = useState<DashboardSection>((section as DashboardSection) || "public-profile");
 
   // Auth and onboarding checks
   useEffect(() => {
@@ -123,7 +123,7 @@ export default function Dashboard() {
       case "privacy":
         return <PrivacyPolicy />;
       default:
-        return <DashboardNotifications />;
+        return <PublicProfile />;
     }
   };
 

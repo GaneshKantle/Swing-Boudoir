@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from "react-route
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider, ProtectedRoute, useAuth } from "@/contexts/AuthContext";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import { PageLoader } from "@/components/PageLoader";
 import { isProtectedRoute } from "@/routes";
 
@@ -85,10 +86,12 @@ function App() {
     <Router>
       <AuthProvider>
         <OnboardingProvider>
-          <div className="App">
-            <AppContent />
-            <Toaster />
-          </div>
+          <NotificationProvider>
+            <div className="App">
+              <AppContent />
+              <Toaster />
+            </div>
+          </NotificationProvider>
         </OnboardingProvider>
       </AuthProvider>
     </Router>

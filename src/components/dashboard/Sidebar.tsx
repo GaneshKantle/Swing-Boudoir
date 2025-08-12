@@ -29,18 +29,17 @@ interface SidebarProps {
 }
 
 const sidebarItemsMain = [
-  { id: "notifications" as DashboardSection, label: "Notifications", icon: Bell },
-  { id: "public-profile" as DashboardSection, label: "Public Profile", icon: Users },
   { id: "competitions" as DashboardSection, label: "Competitions", icon: Trophy },
+  { id: "public-profile" as DashboardSection, label: "Public Profile", icon: Users },
   { id: "votes" as DashboardSection, label: "Votes", icon: Vote },
   { id: "prize-history" as DashboardSection, label: "Prize History", icon: Gift },
-  { id: "settings" as DashboardSection, label: "Settings", icon: SettingsIcon },
 ];
 
 const sidebarItemsSecondary = [
   { id: "support" as DashboardSection, label: "Support", icon: HelpCircle },
   { id: "official-rules" as DashboardSection, label: "Official Rules", icon: FileText },
   { id: "privacy" as DashboardSection, label: "Privacy Policy", icon: Lock },
+  { id: "settings" as DashboardSection, label: "Settings", icon: SettingsIcon },
 ];
 
 export function Sidebar({ 

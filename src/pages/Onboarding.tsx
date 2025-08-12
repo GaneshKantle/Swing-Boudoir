@@ -89,10 +89,10 @@ const Onboarding: React.FC = () => {
 
     const stepComponents = {
       welcome: <WelcomeStep />,
-      "profile-setup": <ProfileSetupStep />,
-      preferences: <PreferencesStep />,
       tutorial: <TutorialStep />,
       rules: <RulesStep />,
+      "profile-setup": <ProfileSetupStep />,
+      preferences: <PreferencesStep />,
       "first-competition": <FirstCompetitionStep />,
       "dashboard-tour": <DashboardTourStep />,
     };

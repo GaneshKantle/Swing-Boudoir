@@ -9,6 +9,7 @@ import { formatDistanceToNow, isAfter, isBefore, startOfDay } from "date-fns";
 import { formatUsdAbbrev } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
+import { notificationService } from "@/lib/notificationService";
 import { AUTH_TOKEN_KEY } from "@/lib/auth";
 import { useState } from "react";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
@@ -45,6 +46,16 @@ export function DashboardCompetitions() {
   const handleJoinContest = async ({ competitionId, competitionName }) => {
     try {
       await joinContest(competitionId);
+      
+      // Trigger notification for joining competition
+      if (user?.id && user?.profileId) {
+        await notificationService.notifyCompetitionJoined(
+          user.id,
+          user.profileId,
+          competitionName
+        );
+      }
+      
       toast({
         title: "Success!",
         description: `You have joined ${competitionName}`,

@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { EditProfile } from "./EditProfile";
 import { useProfile } from "@/hooks/useProfile";
+import { notificationService } from "@/lib/notificationService";
 
 interface UserProfile {
   id: string;
@@ -98,11 +99,14 @@ export function Settings() {
       },
     }));
 
-    // TODO: API call to update settings
-    toast({
-      title: "Settings Updated",
-      description: "Your notification preferences have been saved.",
-    });
+    // Trigger notification for settings change
+    if (user?.id && user?.profileId) {
+      notificationService.notifySettingsChanged(
+        user.id,
+        user.profileId,
+        `Notification setting: ${key}`
+      );
+    }
   };
 
   const updatePrivacySetting = (key: string, value: boolean) => {
@@ -114,11 +118,14 @@ export function Settings() {
       },
     }));
 
-    // TODO: API call to update settings
-    toast({
-      title: "Privacy Settings Updated",
-      description: "Your cookie preferences have been saved.",
-    });
+    // Trigger notification for privacy setting change
+    if (user?.id && user?.profileId) {
+      notificationService.notifySettingsChanged(
+        user.id,
+        user.profileId,
+        `Privacy setting: ${key}`
+      );
+    }
   };
 
   const changePassword = async () => {

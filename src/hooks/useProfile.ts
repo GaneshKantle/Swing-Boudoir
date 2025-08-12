@@ -21,6 +21,13 @@ export interface Profile {
   updatedAt: string;
   lastFreeVoteAt: string | null;
   coverImageId: string | null;
+  instagram: string | null;
+  tiktok: string | null;
+  youtube: string | null;
+  facebook: string | null;
+  twitter: string | null;
+  linkedin: string | null;
+  website: string | null;
   coverImage?: {
     id: string;
     key: string;
@@ -63,6 +70,13 @@ export interface CreateProfileRequest {
   freeVoterMessage?: string | null;
   lastFreeVoteAt?: string | null;
   coverImageId?: string | null;
+  instagram?: string | null;
+  tiktok?: string | null;
+  youtube?: string | null;
+  facebook?: string | null;
+  twitter?: string | null;
+  linkedin?: string | null;
+  website?: string | null;
 }
 
 export interface UpdateProfileRequest {
@@ -81,6 +95,13 @@ export interface UpdateProfileRequest {
   freeVoterMessage?: string | null;
   lastFreeVoteAt?: string | null;
   coverImageId?: string | null;
+  instagram?: string | null;
+  tiktok?: string | null;
+  youtube?: string | null;
+  facebook?: string | null;
+  twitter?: string | null;
+  linkedin?: string | null;
+  website?: string | null;
 }
 
 // Query keys for React Query
