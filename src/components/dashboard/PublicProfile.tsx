@@ -1,310 +1,451 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
-import { useCompetitions } from '@/hooks/useCompetitions';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
-  Share2, 
   Trophy, 
   Users, 
+  TrendingUp, 
   Calendar, 
-  Camera,
-  Edit,
-  ExternalLink
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+  MapPin, 
+  Share2,
+  AlertCircle,
+  Eye,
+  Clock,
+  RefreshCw,
+  Gift,
+  User
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
+import { apiRequest } from '@/lib/api';
+import { useCompetitions } from '@/hooks/useCompetitions';
+import { Competition as CompetitionType } from '@/types/competitions.types';
+import { formatUsdAbbrev } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
+
+interface UserProfile {
+  id: string;
+  name: string;
+  bio: string;
+  modelId: string;
+  profileImage?: string;
+  votingImage?: string;
+  hobbies?: string;
+  paidVoterMessage?: string;
+  freeVoterMessage?: string;
+  portfolioPhotos?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface UserStats {
+  totalVotes: number;
+  ranking: number;
+  totalParticipants: number;
+  votesNeededForFirst: number;
+  totalCompetitions: number;
+  activeCompetitions: number;
+  completedCompetitions: number;
+  totalEarnings: number;
+}
 
 export function PublicProfile() {
   const { user } = useAuth();
-  const { useProfileByUserId } = useProfile();
-  const { getActiveCompetitions } = useCompetitions();
   const { toast } = useToast();
-  const navigate = useNavigate();
-  
-  const [activeTab, setActiveTab] = useState<'overview' | 'competitions' | 'portfolio'>('overview');
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [timeLeft, setTimeLeft] = useState<{ [key: string]: string }>({});
+  const [error, setError] = useState<string | null>(null);
+  const { joinedCompetitions, isLoadingJoined } = useCompetitions();
 
-  // Get profile data
-  const { data: profile, isLoading, error } = useProfileByUserId(user?.id || '');
-  const activeCompetitions = getActiveCompetitions();
+  const fetchUserData = useCallback(async () => {
+    try {
+      setError(null);
 
-  const handleEditProfile = () => {
-    navigate('/dashboard/edit-profile');
-  };
+      const token = localStorage.getItem('token');
+      
+      // Fetch user profile
+      const profileResponse = await apiRequest(`/api/v1/users/${user?.id}/profile`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-  const handlePublicPage = () => {
-    // Navigate to public profile page that can be shared
-    const publicUrl = `${window.location.origin}/profile/${user?.username || user?.id}`;
-    window.open(publicUrl, '_blank');
-  };
+      if (profileResponse.success) {
+        const profileData = profileResponse.data;
+        setUserProfile(profileData);
+      }
+
+      // Fetch user stats
+      const statsResponse = await apiRequest(`/api/v1/users/${user?.id}/stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (statsResponse.success) {
+        const statsData = statsResponse.data;
+        setUserStats(statsData);
+      }
+
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setError('Failed to load profile data');
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.username) {
+      fetchUserData();
+    }
+  }, [user?.username, fetchUserData]);
+
+  // Countdown timer for joined contests
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const newTimeLeft: { [key: string]: string } = {};
+      
+      (joinedCompetitions || []).forEach((competition: CompetitionType) => {
+        const now = new Date().getTime();
+        const end = new Date(competition.endDate).getTime();
+        const difference = end - now;
+
+        if (difference > 0) {
+          const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+          
+          newTimeLeft[competition.id] = `${days.toString().padStart(2, '0')} : ${hours.toString().padStart(2, '0')} : ${minutes.toString().padStart(2, '0')} : ${seconds.toString().padStart(2, '0')}`;
+        } else {
+          newTimeLeft[competition.id] = "Ended";
+        }
+      });
+      setTimeLeft(newTimeLeft);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [joinedCompetitions]);
 
   const shareProfile = async () => {
-    const profileUrl = `${window.location.origin}/profile/${user?.username || user?.id}`;
     try {
+      const profileUrl = `${window.location.origin}/profile/${user?.username}`;
       await navigator.clipboard.writeText(profileUrl);
       toast({
-        title: "Link Copied!",
-        description: "Profile link copied to clipboard.",
+        title: "Profile link copied!",
+        description: "Share this link with your supporters to get more votes.",
       });
-    } catch (err) {
+    } catch (error) {
+      console.error('Error sharing profile:', error);
       toast({
-        title: "Error",
-        description: "Failed to copy link. Please try again.",
+        title: "Error sharing profile",
+        description: "Failed to copy profile link to clipboard.",
         variant: "destructive"
       });
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="text-center py-12">
-          <div className="w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading profile...</p>
-        </div>
-      </div>
-    );
-  }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
-  if (error || !profile) {
+  const computeStatusForContest = (contest: CompetitionType): 'active' | 'coming-soon' | 'ended' => {
+    const now = new Date();
+    const start = new Date(contest.startDate);
+    const end = new Date(contest.endDate);
+    if (now < start) return 'coming-soon';
+    if (now > end) return 'ended';
+    return 'active';
+  };
+
+  const getStatusBadge = (status: "active" | "coming-soon" | "ended") => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-500">Active</Badge>;
+      case "ended":
+        return <Badge variant="secondary">Completed</Badge>;
+      case "coming-soon":
+        return <Badge variant="outline">Upcoming</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const activeCompetitions = (joinedCompetitions || []).filter(comp => computeStatusForContest(comp) === 'active');
+  const comingSoonCompetitions = (joinedCompetitions || []).filter(comp => computeStatusForContest(comp) === 'coming-soon');
+  const endedCompetitions = (joinedCompetitions || []).filter(comp => computeStatusForContest(comp) === 'ended');
+
+  // Show error state
+  if (error) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <h3 className="text-lg font-semibold mb-2">Profile Not Found</h3>
-            <p className="text-gray-600 mb-4">Please complete your profile setup first.</p>
-            <Button onClick={handleEditProfile}>
-              <Edit className="w-4 h-4 mr-2" />
-              Complete Profile
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-foreground">Public Profile</h1>
+        </div>
+        
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+            <h3 className="text-lg font-semibold mb-2">Error loading profile</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={fetchUserData} variant="outline">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Try Again
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">My Profile</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePublicPage}>
-            <ExternalLink className="w-4 h-4 mr-2" />
-            Public Page
-          </Button>
-          <Button variant="outline" onClick={shareProfile}>
-            <Share2 className="w-4 h-4 mr-2" />
+        <h1 className="text-2xl font-bold text-foreground">Public Profile</h1>
+        <div className="flex items-center space-x-2">
+          <Link 
+            to={`/profile/${user?.username}`}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            <Eye className="mr-2 h-4 w-4" />
+            View Profile
+          </Link>
+          <Button onClick={shareProfile} variant="outline">
+            <Share2 className="mr-2 h-4 w-4" />
             Share
           </Button>
-          <Button onClick={handleEditProfile}>
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
+           <Button onClick={shareProfile} variant="outline">
+            <Share2 className="mr-2 h-4 w-4" />
+            Share
           </Button>
         </div>
       </div>
 
-      {/* Profile Info */}
+      {/* Profile Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold">{userStats?.totalVotes || 0}</p>
+                <p className="text-sm text-muted-foreground">Total Votes</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold">#{userStats?.ranking || 0}</p>
+                <p className="text-sm text-muted-foreground">Current Rank</p>
+              </div>
+              <Trophy className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold">{joinedCompetitions?.length || 0}</p>
+                <p className="text-sm text-muted-foreground">Competitions</p>
+              </div>
+              <Users className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold">{formatUsdAbbrev(userStats?.totalEarnings || 0)}</p>
+                <p className="text-sm text-muted-foreground">Total Earnings</p>
+              </div>
+              <Gift className="h-8 w-8 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Profile Details */}
       <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <Avatar className="w-20 h-20">
-              <AvatarImage src={profile?.avatarUrl || undefined} />
-              <AvatarFallback className="text-xl">
-                {profile?.bio?.charAt(0)?.toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h2 className="text-xl font-semibold">{profile?.bio || 'Your Name'}</h2>
-              <p className="text-gray-600">{profile?.bio || 'Tell us about yourself...'}</p>
-              {profile?.hobbiesAndPassions && (
-                <p className="text-sm text-gray-500 mt-1">{profile?.hobbiesAndPassions}</p>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <User className="mr-2 h-5 w-5" />
+            Profile Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start space-x-6">
+            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+              {userProfile?.profileImage ? (
+                <img 
+                  src={userProfile.profileImage} 
+                  alt="Profile" 
+                  className="w-20 h-20 rounded-full object-cover"
+                />
+              ) : (
+                <span className="text-2xl font-bold text-primary">
+                  {user?.name?.charAt(0) || 'U'}
+                </span>
               )}
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold mb-2">{user?.name || 'User'}</h2>
+              <p className="text-muted-foreground mb-4">{userProfile?.bio || 'No bio available'}</p>
+              <div className="bg-muted p-3 rounded-md">
+                <p className="text-sm font-medium mb-1">Profile URL</p>
+                <code className="text-sm break-all">{window.location.origin}/profile/{user?.username}</code>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">15</div>
-            <div className="text-sm text-gray-600">Ranking</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">3</div>
-            <div className="text-sm text-gray-600">Active Contests</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-orange-600">$1,250</div>
-            <div className="text-sm text-gray-600">Total Earnings</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-purple-600">892</div>
-            <div className="text-sm text-gray-600">Total Votes</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-        <Button
-          variant={activeTab === 'overview' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setActiveTab('overview')}
-          className="flex-1"
-        >
-          Overview
-        </Button>
-        <Button
-          variant={activeTab === 'competitions' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setActiveTab('competitions')}
-          className="flex-1"
-        >
-          Competitions
-        </Button>
-        <Button
-          variant={activeTab === 'portfolio' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setActiveTab('portfolio')}
-          className="flex-1"
-        >
-          Portfolio
-        </Button>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === 'overview' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700">Member Since</label>
-                <p className="text-gray-900">{profile?.createdAt ? new Date(profile?.createdAt).toLocaleDateString() : 'N/A'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Last Updated</label>
-                <p className="text-gray-900">{profile?.updatedAt ? new Date(profile?.updatedAt).toLocaleDateString() : 'N/A'}</p>
-              </div>
-            </div>
-            
-            {profile?.hobbiesAndPassions && (
-              <div>
-                <label className="text-sm font-medium text-gray-700">Hobbies & Interests</label>
-                <p className="text-gray-900">{profile?.hobbiesAndPassions}</p>
-              </div>
-            )}
-
-            {profile?.paidVoterMessage && (
-              <div>
-                <label className="text-sm font-medium text-gray-700">Message for Premium Voters</label>
-                <p className="text-gray-900">{profile?.paidVoterMessage}</p>
-              </div>
-            )}
-
-            {profile?.freeVoterMessage && (
-              <div>
-                <label className="text-sm font-medium text-gray-700">Message for Free Voters</label>
-                <p className="text-gray-900">{profile?.freeVoterMessage}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {activeTab === 'competitions' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Your Competitions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {activeCompetitions && activeCompetitions.length > 0 ? (
-              <div className="space-y-4">
-                {activeCompetitions.map((contest) => (
-                  <div key={contest.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Trophy className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{contest.name}</h3>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            {new Date(contest.startDate).toLocaleDateString()}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            Ends: {new Date(contest.endDate).toLocaleDateString()}
-                          </span>
-                        </div>
+      {/* Active Competitions */}
+      {activeCompetitions.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-2xl font-semibold">Active Competitions</h2>
+          <div className="grid grid-cols-1 gap-4">
+            {activeCompetitions.map((competition: CompetitionType) => (
+              <Card key={competition.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center">
+                      <Trophy className="mr-2 h-5 w-5" />
+                      {competition.name}
+                    </CardTitle>
+                    {getStatusBadge('active')}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-muted-foreground mb-2">{formatUsdAbbrev(competition.prizePool)} Prize Pool</p>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Clock className="mr-1 h-4 w-4" />
+                        <span>{timeLeft[competition.id] || "Loading..."}</span>
                       </div>
                     </div>
-                    
-                    <div className="text-right">
-                      <div className="text-sm font-medium text-green-600">${contest.prizePool.toLocaleString()}</div>
-                      <div className="text-xs text-gray-500">Prize Pool</div>
+                    <div className="flex items-center justify-end">
+                      <Button variant="outline" onClick={shareProfile}>
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Share Profile
+                      </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Competitions Yet</h3>
-                <p className="text-gray-600 mb-4">Join your first competition to start building your profile!</p>
-                <Button onClick={() => navigate('/dashboard/competitions')}>
-                  Browse Competitions
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       )}
 
-      {activeTab === 'portfolio' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Portfolio Photos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {profile?.profilePhotos && profile?.profilePhotos.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {profile?.profilePhotos.map((photo, index) => (
-                  <div key={photo.id} className="aspect-square rounded-lg overflow-hidden border">
-                    <img 
-                      src={photo.url} 
-                      alt={`Portfolio ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+      {/* Upcoming Competitions */}
+      {comingSoonCompetitions.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-2xl font-semibold">Upcoming Competitions</h2>
+          <div className="grid grid-cols-1 gap-4">
+            {comingSoonCompetitions.map((competition: CompetitionType) => (
+              <Card key={competition.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center">
+                      <Gift className="mr-2 h-5 w-5" />
+                      {competition.name}
+                    </CardTitle>
+                    {getStatusBadge('coming-soon')}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Camera className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Portfolio Photos</h3>
-                <p className="text-gray-600 mb-4">Upload photos to showcase your work!</p>
-                <Button onClick={handleEditProfile}>
-                  <Camera className="w-4 h-4 mr-2" />
-                  Upload Photos
-                </Button>
-              </div>
-            )}
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-muted-foreground mb-2">{formatUsdAbbrev(competition.prizePool)} Prize Pool</p>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="mr-1 h-4 w-4" />
+                        Starts: {formatDistanceToNow(new Date(competition.startDate), { addSuffix: true })}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-end">
+                      <Button variant="outline" disabled>
+                        Coming Soon
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Completed Competitions */}
+      {endedCompetitions.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-2xl font-semibold">Completed Competitions</h2>
+          <div className="grid grid-cols-1 gap-4">
+            {endedCompetitions.map((competition: CompetitionType) => (
+              <Card key={competition.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center">
+                      <Trophy className="mr-2 h-5 w-5" />
+                      {competition.name}
+                    </CardTitle>
+                    {getStatusBadge('ended')}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-muted-foreground mb-2">{formatUsdAbbrev(competition.prizePool)} Prize Pool</p>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="mr-1 h-4 w-4" />
+                        Ended: {formatDistanceToNow(new Date(competition.endDate), { addSuffix: true })}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-end">
+                      <Button variant="outline">
+                        View Results
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* No competitions message */}
+      {isLoadingJoined ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading competitions...</p>
+          </div>
+        </div>
+      ) : (joinedCompetitions?.length || 0) === 0 && (
+        <Card>
+          <CardContent className="text-center p-8">
+            <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Competitions Joined</h3>
+            <p className="text-muted-foreground mb-4">You haven't joined any competitions yet.</p>
+            <Button>Explore Competitions</Button>
           </CardContent>
         </Card>
       )}
