@@ -10,7 +10,7 @@ export interface Notification {
   type: NotificationType;
   title: string;
   message: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   isRead: boolean;
   isArchived: boolean;
   priority: 'low' | 'medium' | 'high';
@@ -38,7 +38,7 @@ export interface NotificationCreateRequest {
   type: NotificationType;
   title: string;
   message: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   priority?: 'low' | 'medium' | 'high';
   expiresAt?: string;
 }

@@ -12,7 +12,8 @@ import {
   Lock,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardSection } from "@/pages/Dashboard";
@@ -33,6 +34,7 @@ const sidebarItemsMain = [
   { id: "public-profile" as DashboardSection, label: "Public Profile", icon: Users },
   { id: "votes" as DashboardSection, label: "Votes", icon: Vote },
   { id: "prize-history" as DashboardSection, label: "Prize History", icon: Gift },
+  { id: "leaderboard" as DashboardSection, label: "Leaderboard", icon: TrendingUp },
 ];
 
 const sidebarItemsSecondary = [
@@ -65,18 +67,28 @@ export function Sidebar({
   // Mobile sidebar
   if (isMobile) {
     return (
-      <div className={`fixed inset-0 z-50 bg-black bg-opacity-50 transition-opacity duration-300 ${
-        isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-      }`}>
-        <div className={`fixed left-0 top-0 h-full bg-card border-r border-border transition-transform duration-300 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}>
-          <div className="w-64 h-full flex flex-col">
-            <div className="p-4 border-b border-border">
+      <div 
+        className={`fixed inset-0 z-50 transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onToggle} // Close sidebar when clicking outside
+      >
+        {/* Semi-transparent overlay */}
+        <div className="absolute inset-0 bg-black bg-opacity-50"></div>
+        
+        {/* Sidebar content */}
+        <div 
+          className={`fixed left-0 top-0 h-full bg-white border-r border-border transition-transform duration-300 ${
+            isOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+          onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside sidebar
+        >
+          <div className="w-64 h-full flex flex-col bg-white">
+            <div className="p-4 border-b border-border bg-white">
               <h2 className="text-xl font-bold text-foreground">Dashboard</h2>
             </div>
             
-            <nav className="flex-1 p-4 space-y-2">
+            <nav className="flex-1 p-4 space-y-2 bg-white">
               {sidebarItemsMain.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -96,7 +108,7 @@ export function Sidebar({
               })}
             </nav>
 
-            <div className="p-4 border-t border-border">
+            <div className="p-4 border-t border-border bg-white">
               <nav className="space-y-2">
                 {sidebarItemsSecondary.map((item) => {
                   const Icon = item.icon;

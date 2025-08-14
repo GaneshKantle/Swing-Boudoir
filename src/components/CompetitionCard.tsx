@@ -7,6 +7,7 @@ import { useCompetitions } from "@/hooks/useCompetitions";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { triggerContestJoined, triggerContestLeft } from "@/lib/notificationTriggers";
 import defaultImage from "@/assets/hot-girl-summer.jpg";
 
 interface CompetitionCardProps {
@@ -16,7 +17,7 @@ interface CompetitionCardProps {
 
 export const CompetitionCard: React.FC<CompetitionCardProps> = ({ competition, showJoinButton = true }) => {
   const { joinContest, leaveContest, isJoining, isLeaving, hasJoinedContest, joinError, leaveError, needsProfileSetup } = useCompetitions();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
@@ -25,6 +26,16 @@ export const CompetitionCard: React.FC<CompetitionCardProps> = ({ competition, s
   const handleJoinContest = async () => {
     try {
       await joinContest(competition.id);
+      
+      // Trigger notification for joining contest
+      if (user?.profileId) {
+        try {
+          await triggerContestJoined(user.profileId, competition.name);
+        } catch (notificationError) {
+          console.warn('Failed to send notification:', notificationError);
+        }
+      }
+      
       toast({
         title: "Success!",
         description: `You have joined ${competition.name}`,
@@ -58,6 +69,16 @@ export const CompetitionCard: React.FC<CompetitionCardProps> = ({ competition, s
   const handleLeaveContest = async () => {
     try {
       await leaveContest(competition.id);
+      
+      // Trigger notification for leaving contest
+      if (user?.profileId) {
+        try {
+          await triggerContestLeft(user.profileId, competition.name);
+        } catch (notificationError) {
+          console.warn('Failed to send notification:', notificationError);
+        }
+      }
+      
       toast({
         title: "Success!",
         description: `You have left ${competition.name}`,

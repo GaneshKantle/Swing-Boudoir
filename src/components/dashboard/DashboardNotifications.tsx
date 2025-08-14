@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { useNotifications } from '@/contexts/NotificationContext';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,34 +14,98 @@ import {
   Lightbulb,
   Clock,
   Star,
-  AlertCircle
+  AlertCircle,
+  Eye
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { 
+  getNotifications, 
+  markNotificationAsRead, 
+  markAllNotificationsAsRead, 
+  updateNotification, 
+  deleteNotification,
+  getUnreadNotificationCount,
+  NOTIFICATION_ICONS
+} from '@/lib/notificationTriggers';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface Notification {
+  id: string;
+  message: string;
+  profileId: string;
+  createdAt: string;
+  updatedAt: string;
+  isRead: boolean;
+  archived: boolean;
+  icon: string;
+  action: string | null;
+}
 
 export function DashboardNotifications() {
-  const { 
-    notifications, 
-    unreadCount, 
-    isLoading, 
-    error,
-    markAsRead, 
-    markAllAsRead, 
-    markAsArchived, 
-    deleteNotification,
-    refreshNotifications 
-  } = useNotifications();
-  
+  const { user } = useAuth();
   const { toast } = useToast();
+  
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'unread' | 'archived'>('all');
 
+  // Fetch notifications from API
+  const fetchNotifications = async () => {
+    if (!user?.profileId) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const fetchedNotifications = await getNotifications(user.profileId);
+      
+      // Debug: Log what we're getting from the API
+      console.log('Fetched notifications:', fetchedNotifications);
+      console.log('Type of fetchedNotifications:', typeof fetchedNotifications);
+      console.log('Is array:', Array.isArray(fetchedNotifications));
+      
+      // Ensure we always have an array
+      const notificationsArray = Array.isArray(fetchedNotifications) ? fetchedNotifications : [];
+      
+      setNotifications(notificationsArray);
+      
+      // Update unread count
+      const unread = await getUnreadNotificationCount(user.profileId);
+      setUnreadCount(unread);
+    } catch (err) {
+      setError('Failed to load notifications');
+      console.error('Error fetching notifications:', err);
+      // Set empty array on error to prevent filter issues
+      setNotifications([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Refresh notifications
+  const refreshNotifications = () => {
+    fetchNotifications();
+  };
+
+  // Mark single notification as read
   const handleMarkAsRead = async (id: string) => {
     try {
-      await markAsRead(id);
-      toast({
-        title: "Marked as read",
-        description: "Notification marked as read successfully.",
-      });
+      const success = await markNotificationAsRead(id);
+      if (success) {
+        // Update local state
+        setNotifications(prev => 
+          prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+        
+        toast({
+          title: "Marked as read",
+          description: "Notification marked as read successfully.",
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -52,13 +115,22 @@ export function DashboardNotifications() {
     }
   };
 
+  // Mark all notifications as read
   const handleMarkAllAsRead = async () => {
+    if (!user?.profileId) return;
+    
     try {
-      await markAllAsRead();
-      toast({
-        title: "All marked as read",
-        description: "All notifications marked as read successfully.",
-      });
+      const success = await markAllNotificationsAsRead(user.profileId);
+      if (success) {
+        // Update local state
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+        
+        toast({
+          title: "All marked as read",
+          description: "All notifications marked as read successfully.",
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -68,13 +140,21 @@ export function DashboardNotifications() {
     }
   };
 
+  // Archive notification
   const handleMarkAsArchived = async (id: string) => {
     try {
-      await markAsArchived(id);
-      toast({
-        title: "Archived",
-        description: "Notification archived successfully.",
-      });
+      const success = await updateNotification(id, { archived: true });
+      if (success) {
+        // Update local state
+        setNotifications(prev => 
+          prev.map(n => n.id === id ? { ...n, archived: true } : n)
+        );
+        
+        toast({
+          title: "Archived",
+          description: "Notification archived successfully.",
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -84,13 +164,25 @@ export function DashboardNotifications() {
     }
   };
 
+  // Delete notification
   const handleDelete = async (id: string) => {
     try {
-      await deleteNotification(id);
-      toast({
-        title: "Deleted",
-        description: "Notification deleted successfully.",
-      });
+      const success = await deleteNotification(id);
+      if (success) {
+        // Remove from local state
+        setNotifications(prev => prev.filter(n => n.id !== id));
+        
+        // Update unread count if it was unread
+        const deletedNotification = notifications.find(n => n.id === id);
+        if (deletedNotification && !deletedNotification.isRead) {
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+        
+        toast({
+          title: "Deleted",
+          description: "Notification deleted successfully.",
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -100,47 +192,41 @@ export function DashboardNotifications() {
     }
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'competition_joined':
-      case 'competition_left':
-      case 'competition_created':
-      case 'competition_upcoming':
+  // Get notification icon based on API icon
+  const getNotificationIcon = (icon: string) => {
+    switch (icon) {
+      case NOTIFICATION_ICONS.CONTEST:
         return <Trophy className="w-5 h-5 text-blue-500" />;
-      case 'vote_received':
-      case 'vote_premium':
+      case NOTIFICATION_ICONS.VOTE:
         return <Heart className="w-5 h-5 text-red-500" />;
-      case 'settings_changed':
+      case NOTIFICATION_ICONS.SETTINGS:
         return <Settings className="w-5 h-5 text-green-500" />;
-      case 'reminder':
+      case NOTIFICATION_ICONS.REMINDER:
         return <Clock className="w-5 h-5 text-orange-500" />;
-      case 'tip':
+      case NOTIFICATION_ICONS.TIP:
         return <Lightbulb className="w-5 h-5 text-yellow-500" />;
-      case 'motivation':
+      case NOTIFICATION_ICONS.MOTIVATION:
         return <Star className="w-5 h-5 text-purple-500" />;
+      case NOTIFICATION_ICONS.SYSTEM:
+        return <Bell className="w-5 h-5 text-gray-500" />;
       default:
         return <Bell className="w-5 h-5 text-gray-500" />;
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const filteredNotifications = notifications.filter(notification => {
+  // Filter notifications based on selected filter
+  const filteredNotifications = Array.isArray(notifications) ? notifications.filter(notification => {
     if (selectedFilter === 'unread') return !notification.isRead;
-    if (selectedFilter === 'archived') return notification.isArchived;
-    return !notification.isArchived;
-  });
+    if (selectedFilter === 'archived') return notification.archived;
+    return !notification.archived;
+  }) : [];
+
+  // Fetch notifications on component mount and when user changes
+  useEffect(() => {
+    if (user?.profileId) {
+      fetchNotifications();
+    }
+  }, [user?.profileId]);
 
   if (error) {
     return (
@@ -282,7 +368,7 @@ export function DashboardNotifications() {
                 <div className="flex items-start space-x-3">
                   {/* Icon */}
                   <div className="flex-shrink-0 mt-1">
-                    {getNotificationIcon(notification.type)}
+                    {getNotificationIcon(notification.icon)}
                   </div>
                   
                   {/* Content */}
@@ -291,18 +377,14 @@ export function DashboardNotifications() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-1">
                           <h4 className={`font-semibold ${!notification.isRead ? 'text-blue-900' : 'text-foreground'}`}>
-                            {notification.title}
+                            {notification.message}
                           </h4>
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs ${getPriorityColor(notification.priority)}`}
-                          >
-                            {notification.priority}
-                          </Badge>
+                          {notification.action && (
+                            <Badge variant="outline" className="text-xs">
+                              {notification.action}
+                            </Badge>
+                          )}
                         </div>
-                        <p className={`text-sm ${!notification.isRead ? 'text-blue-800' : 'text-muted-foreground'}`}>
-                          {notification.message}
-                        </p>
                         <p className="text-xs text-muted-foreground mt-2">
                           {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                         </p>
@@ -318,8 +400,9 @@ export function DashboardNotifications() {
                         size="sm"
                         onClick={() => handleMarkAsRead(notification.id)}
                         className="h-8 w-8 p-0"
+                        title="Mark as read"
                       >
-                        <Check className="h-4 w-4" />
+                        <Eye className="h-4 w-4" />
                       </Button>
                     )}
                     
@@ -328,6 +411,7 @@ export function DashboardNotifications() {
                       size="sm"
                       onClick={() => handleMarkAsArchived(notification.id)}
                       className="h-8 w-8 p-0"
+                      title="Archive"
                     >
                       <Archive className="h-4 w-4" />
                     </Button>
@@ -337,6 +421,7 @@ export function DashboardNotifications() {
                       size="sm"
                       onClick={() => handleDelete(notification.id)}
                       className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      title="Delete"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

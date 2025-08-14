@@ -17,9 +17,22 @@ import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
 import PublicProfilePage from "./pages/PublicProfilePage";
+import CompetitionDetails from "./pages/CompetitionDetails";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
 import AddContest from "./pages/AddContest";
+import Leaderboard from "./pages/Leaderboard";
+
+// Voter Pages
+import { 
+  VoterDashboard, 
+  BrowseContests, 
+  BuyVotes, 
+  VoteHistory, 
+  Favorites,
+  PaymentSuccess,
+  PaymentFailure
+} from "./pages/voters";
 
 // Admin Pages
 import { AdminLogin } from "./admin/pages/AdminLogin";
@@ -49,6 +62,7 @@ const AppContent: React.FC = () => {
       <Route path="/contact" element={<Contact />} />
       <Route path="/add-contest" element={<AddContest />} />
       <Route path="/profile/:id" element={<PublicProfilePage />} />
+      <Route path="/competition/:id" element={<CompetitionDetails />} />
 
       {/* Onboarding Route */}
       <Route
@@ -66,6 +80,64 @@ const AppContent: React.FC = () => {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Voter Routes */}
+      <Route
+        path="/voters"
+        element={
+          <ProtectedRoute>
+            <VoterDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/voters/browse-contests"
+        element={
+          <ProtectedRoute>
+            <BrowseContests />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/voters/buy-votes"
+        element={
+          <ProtectedRoute>
+            <BuyVotes />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/voters/vote-history"
+        element={
+          <ProtectedRoute>
+            <VoteHistory />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/voters/favorites"
+        element={
+          <ProtectedRoute>
+            <Favorites />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/voters/payment-success"
+        element={
+          <ProtectedRoute>
+            <PaymentSuccess />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/voters/payment-failure"
+        element={
+          <ProtectedRoute>
+            <PaymentFailure />
           </ProtectedRoute>
         }
       />

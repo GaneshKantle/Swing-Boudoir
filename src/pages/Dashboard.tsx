@@ -13,6 +13,7 @@ import { Support } from "@/components/dashboard/Support";
 import { OfficialRules } from "@/components/dashboard/OfficialRules";
 import { PrivacyPolicy } from "@/components/dashboard/PrivacyPolicy";
 import Header from "@/components/Header";
+import Leaderboard from "@/pages/Leaderboard";
 import { ONBOARDING_REDIRECT, authPages } from "@/routes";
 
 export type DashboardSection =
@@ -22,6 +23,7 @@ export type DashboardSection =
   | "competitions"
   | "votes"
   | "prize-history"
+  | "leaderboard"
   | "settings"
   | "support"
   | "official-rules"
@@ -114,6 +116,8 @@ export default function Dashboard() {
         return <Votes />;
       case "prize-history":
         return <PrizeHistory />;
+      case "leaderboard":
+        return <Leaderboard />;
       case "settings":
         return <Settings />;
       case "support":

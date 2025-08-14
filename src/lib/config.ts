@@ -12,14 +12,14 @@ const isLocalhost = window.location.hostname === 'localhost' || window.location.
 // API Base URLs - Using relative paths for universal compatibility
 export const API_CONFIG = {
   // Better Auth API - use relative path (will be proxied in development)
-  AUTH_BASE_URL: 'https://api.swingboudoirmag.com/api/v1/auth',
+  AUTH_BASE_URL: isDevelopment ? '/api/v1/auth' : 'https://api.swingboudoirmag.com/api/v1/auth',
   
   // Main API - use relative URLs (works in both localhost and production)
-  API_BASE_URL: 'https://api.swingboudoirmag.com/api/v1',
-  API_BASE_HOST: 'https://api.swingboudoirmag.com',
+  API_BASE_URL: isDevelopment ? '/api/v1' : 'https://api.swingboudoirmag.com/api/v1',
+  API_BASE_HOST: isDevelopment ? '' : 'https://api.swingboudoirmag.com',
   
   // Upload service - use relative path (will be proxied in development)
-  UPLOAD_URL: 'https://api.swingboudoirmag.com/api/v1/uploadthing',
+  UPLOAD_URL: isDevelopment ? '/api/v1/uploadthing' : 'https://api.swingboudoirmag.com/api/v1/uploadthing',
   
   // Current origin for callback URLs
   CURRENT_ORIGIN: window.location.origin,
@@ -33,7 +33,7 @@ export const API_CONFIG = {
 export const getApiUrl = (endpoint: string): string => {
   // If endpoint starts with /api/v1, use relative URL
   if (endpoint.startsWith('/api/v1')) {
-    return `${API_CONFIG.API_BASE_HOST}${endpoint}`;
+    return isDevelopment ? endpoint : `${API_CONFIG.API_BASE_HOST}${endpoint}`;
   }
   
   // Otherwise, prepend the API base URL

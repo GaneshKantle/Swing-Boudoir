@@ -153,14 +153,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const interval = setInterval(async () => {
       try {
         // Check for new competitions
-        const availableResponse = await fetch(`https://api.swingboudoirmag.com/api/v1/contest/${user.id}/available`);
+        const availableResponse = await fetch(`/api/v1/contest/${user.id}/available`);
         if (availableResponse.ok) {
           const availableData = await availableResponse.json();
           // Check if there are new competitions (this would need more sophisticated logic in production)
         }
 
         // Check for upcoming competitions
-        const upcomingResponse = await fetch('https://api.swingboudoirmag.com/api/v1/contest/upcoming');
+        const upcomingResponse = await fetch('/api/v1/contest/upcoming');
         if (upcomingResponse.ok) {
           const upcomingData = await upcomingResponse.json();
           // Process upcoming competitions
