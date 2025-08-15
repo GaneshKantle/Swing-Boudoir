@@ -83,7 +83,7 @@ export function Sidebar({
           }`}
           onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside sidebar
         >
-          <div className="w-64 h-full flex flex-col bg-white">
+          <div className="w-64 h-full flex flex-col bg-white shadow-2xl">
             <div className="p-4 border-b border-border bg-white">
               <h2 className="text-xl font-bold text-foreground">Dashboard</h2>
             </div>
@@ -109,7 +109,7 @@ export function Sidebar({
             </nav>
 
             <div className="p-4 border-t border-border bg-white">
-              <nav className="space-y-2">
+              <nav className="space-y-2 bg-white">
                 {sidebarItemsSecondary.map((item) => {
                   const Icon = item.icon;
                   return (

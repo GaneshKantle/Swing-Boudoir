@@ -60,57 +60,57 @@ const Header = ({ onSidebarToggle }: HeaderProps) => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Mobile Menu Button - Far Left (Mobile Only) */}
-        {isAuthenticated && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden"
-          >
-            <Menu className="w-5 h-5" />
-          </Button>
-        )}
+                 {/* Mobile Menu Button - Far Left (Mobile Only) */}
+         {isAuthenticated && (
+           <Button 
+             variant="ghost" 
+             size="sm" 
+             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+             className="lg:hidden"
+           >
+             <Menu className="w-5 h-5" />
+           </Button>
+         )}
 
-        {/* Logo - Center (Mobile) / Left (Desktop) */}
-        <div className={`flex items-center ${isAuthenticated ? 'md:flex' : 'flex'}`}>
-          <Link to="/" className="flex flex-col items-start">
-            <div className="text-2xl font-display font-bold text-primary tracking-tight">SWING</div>
-            <div className="text-xs font-medium text-muted-foreground -mt-1 tracking-wider">Boudoir</div>
-          </Link>
-        </div>
+                 {/* Logo - Center (Mobile) / Left (Desktop) */}
+         <div className={`flex items-center ${isAuthenticated ? 'lg:flex' : 'flex'}`}>
+           <Link to="/" className="flex flex-col items-start">
+             <div className="text-2xl font-display font-bold text-primary tracking-tight">SWING</div>
+             <div className="text-xs font-medium text-muted-foreground -mt-1 tracking-wider">Boudoir</div>
+           </Link>
+         </div>
 
         {/* Right side - Desktop navigation and profile menu */}
         <div className="flex items-center space-x-6">
-          {/* Navigation Links - Only show on non-dashboard pages (Desktop) */}
-          {!isDashboardPage && (
-            <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/competitions" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Competitions
-              </Link>
-              <Link to="/leaderboard" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Leaderboard
-              </Link>
-            </nav>
-          )}
+                     {/* Navigation Links - Only show on non-dashboard pages (Desktop) */}
+           {!isDashboardPage && (
+             <nav className="hidden lg:flex items-center space-x-6">
+               <Link to="/competitions" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                 Competitions
+               </Link>
+               <Link to="/leaderboard" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                 Leaderboard
+               </Link>
+             </nav>
+           )}
 
-          {/* Mobile Sidebar Toggle - Only show on dashboard pages (Desktop) */}
-          {isDashboardPage && (
-            <Button variant="ghost" size="sm" onClick={onSidebarToggle} className="hidden md:flex">
-              <Menu className="w-5 h-5" />
-            </Button>
-          )}
+                     {/* Mobile Sidebar Toggle - Only show on dashboard pages (Desktop) */}
+           {isDashboardPage && (
+             <Button variant="ghost" size="sm" onClick={onSidebarToggle} className="hidden lg:flex">
+               <Menu className="w-5 h-5" />
+             </Button>
+           )}
 
           {/* Profile Menu - Show when authenticated */}
           {isAuthenticated && user && (
             <>
-              {/* Notifications Icon - Desktop Only */}
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleNotificationsClick}
-                className="relative h-8 w-8 rounded-full p-0 hidden md:flex"
-              >
+                             {/* Notifications Icon - Desktop Only */}
+               <Button 
+                 variant="ghost" 
+                 size="sm" 
+                 onClick={handleNotificationsClick}
+                 className="relative h-8 w-8 rounded-full p-0 hidden lg:flex"
+               >
                 <Bell className="w-4 h-4" />
                 {unreadCount > 0 && (
                   <Badge 
@@ -176,9 +176,9 @@ const Header = ({ onSidebarToggle }: HeaderProps) => {
         </div>
       </div>
 
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && isAuthenticated && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 md:hidden">
+             {/* Mobile Menu Overlay */}
+       {isMobileMenuOpen && isAuthenticated && (
+         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 lg:hidden">
           <div className="fixed left-0 top-0 h-full w-80 bg-background border-r border-border shadow-lg">
             <div className="p-4 border-b border-border">
               <div className="flex items-center justify-between">
